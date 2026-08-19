@@ -1,0 +1,138 @@
+export interface PythonScriptItem {
+  id: string;
+  name: string;
+  filename: string;
+  version: string;
+  category: 'Network' | 'Identity' | 'Media' | 'Scanners' | 'Custom';
+  pythonVersion: string;
+  size: string;
+  checksum: string;
+  dependencies: string[];
+  description: string;
+  downloads: number;
+  lastUpdated: string;
+  downloadUrl: string;
+}
+
+export const scriptRepository: PythonScriptItem[] = [
+  {
+    id: 'py-0',
+    name: 'Indian (+91) DoT Circle & Carrier Inspector',
+    filename: 'phone_recon_india.py',
+    version: 'v1.0.0',
+    category: 'Identity',
+    pythonVersion: 'Python 3.9+',
+    size: '18.2 KB',
+    checksum: 'f4b2380129a811c7629b3c401a91e0a2',
+    dependencies: ['phonenumbers>=8.13.0', 'requests>=2.28.0', 'colorama>=0.4.6'],
+    description: 'Dedicated CLI tool to parse Indian (+91) 10-digit mobile numbers, detect 22 DoT telecom circles (Mumbai, Delhi, Karnataka, etc.), allocated operator (Jio, Airtel, Vi, BSNL), and MCC/MNC codes.',
+    downloads: 3420,
+    lastUpdated: '2026-08-19',
+    downloadUrl: '/scripts/phone_recon_india.py',
+  },
+  {
+    id: 'py-1',
+    name: 'DNS Recon Pro & Subdomain Enumerator',
+    filename: 'dns_recon_pro.py',
+    version: 'v2.4.0',
+    category: 'Network',
+    pythonVersion: 'Python 3.9+',
+    size: '24.8 KB',
+    checksum: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+    dependencies: ['dnspython>=2.3.0', 'aiohttp>=3.8.0', 'colorama>=0.4.6'],
+    description: 'Asynchronous multi-threaded Python script for full DNS record queries, brute-force subdomain discovery, and reverse IP lookup.',
+    downloads: 4820,
+    lastUpdated: '2026-08-10',
+    downloadUrl: '/scripts/dns_recon_pro.py',
+  },
+  {
+    id: 'py-2',
+    name: 'Social Username Recon Hunter',
+    filename: 'username_recon_hunter.py',
+    version: 'v1.8.2',
+    category: 'Identity',
+    pythonVersion: 'Python 3.8+',
+    size: '31.2 KB',
+    checksum: 'a8f5f167f44f4964e6c998dee827110c',
+    dependencies: ['requests>=2.28.0', 'beautifulsoup4>=4.11.0', 'tqdm>=4.64.0'],
+    description: 'High-speed multi-platform username checker probing 25+ social networks, developer portals, and forums with HTTP proxy support.',
+    downloads: 6190,
+    lastUpdated: '2026-08-15',
+    downloadUrl: '/scripts/username_recon_hunter.py',
+  },
+  {
+    id: 'py-3',
+    name: 'EXIF Image Forensic & Scrubber Tool',
+    filename: 'exif_forensic_scrubber.py',
+    version: 'v3.0.1',
+    category: 'Media',
+    pythonVersion: 'Python 3.10+',
+    size: '18.4 KB',
+    checksum: '7f83b1657ff1fc53b92dc18148a1d65d',
+    dependencies: ['Pillow>=9.5.0', 'exifread>=3.0.0'],
+    description: 'Command line utility to extract GPS tags, camera serial numbers, and strip sensitive EXIF data prior to public file distribution.',
+    downloads: 3110,
+    lastUpdated: '2026-08-02',
+    downloadUrl: '/scripts/exif_forensic_scrubber.py',
+  },
+  {
+    id: 'py-4',
+    name: 'HTTP Response Header Security Auditor',
+    filename: 'header_security_audit.py',
+    version: 'v1.2.0',
+    category: 'Scanners',
+    pythonVersion: 'Python 3.8+',
+    size: '14.1 KB',
+    checksum: '4e298516b3252e07e86cf47f2e1451f2',
+    dependencies: ['urllib3>=1.26.0', 'tabulate>=0.9.0'],
+    description: 'Audit web application response headers for missing HSTS, CSP, X-Frame-Options, and cookie security flags.',
+    downloads: 2450,
+    lastUpdated: '2026-07-28',
+    downloadUrl: '/scripts/header_security_audit.py',
+  },
+  {
+    id: 'py-5',
+    name: 'IP Geolocation & ASN Mass Enricher',
+    filename: 'ip_asn_enricher.py',
+    version: 'v2.1.0',
+    category: 'Network',
+    pythonVersion: 'Python 3.9+',
+    size: '20.6 KB',
+    checksum: '9f86d081884c7d659a2feaa0c55ad015',
+    dependencies: ['geoip2>=4.6.0', 'pandas>=2.0.0'],
+    description: 'Bulk process CSV list of IP addresses to append MaxMind GeoIP2 country, ISP, ASN, and proxy flag metadata.',
+    downloads: 1980,
+    lastUpdated: '2026-08-05',
+    downloadUrl: '/scripts/ip_asn_enricher.py',
+  },
+  {
+    id: 'py-6',
+    name: 'Phone Number & Carrier Inspector CLI',
+    filename: 'phone_carrier_tracer.py',
+    version: 'v1.0.0',
+    category: 'Identity',
+    pythonVersion: 'Python 3.9+',
+    size: '16.5 KB',
+    checksum: 'b2d8f9910c554e21a80c2f829911e0f4',
+    dependencies: ['phonenumbers>=8.13.0', 'requests>=2.28.0'],
+    description: 'CLI tool to validate international E.164 phone formats, trace telecom carrier names, line types, and timezones.',
+    downloads: 1240,
+    lastUpdated: '2026-08-18',
+    downloadUrl: '/scripts/phone_carrier_tracer.py',
+  },
+  {
+    id: 'py-7',
+    name: '17-Digit VIN Decoder & Hardware Auditor',
+    filename: 'vin_decoder_tool.py',
+    version: 'v1.1.0',
+    category: 'Custom',
+    pythonVersion: 'Python 3.8+',
+    size: '19.2 KB',
+    checksum: 'c4ca4238a0b923820dcc509a6f75849b',
+    dependencies: ['requests>=2.28.0', 'colorama>=0.4.6'],
+    description: 'Decode 17-character VIN numbers via NHTSA API into manufacturer, model year, assembly plant, and engine displacement specs.',
+    downloads: 980,
+    lastUpdated: '2026-08-19',
+    downloadUrl: '/scripts/vin_decoder_tool.py',
+  },
+];
