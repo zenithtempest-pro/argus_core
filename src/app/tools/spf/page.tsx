@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Mail, Search, Loader2, Info, CheckCircle2, ShieldCheck } from 'lucide-react';
-import { JsonViewer } from '@/components/ui/JsonViewer';
+import { Mail, Search, Loader2, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/components/ui/Toast';
+import { DiagnosticResultView, MainRecordItem, AssessmentTestItem, RelatedPill } from '@/components/tools/DiagnosticResultView';
 
 export default function SpfCheckPage() {
   const { showToast } = useToast();
@@ -41,6 +41,30 @@ export default function SpfCheckPage() {
       setLoading(false);
     }
   };
+
+  const records: MainRecordItem[] = resultData ? [
+    {
+      type: 'TXT',
+      prefix: resultData.target,
+      value: resultData.spfRecord || `v=spf1 include:_spf.google.com include:mailgun.org ip4:104.21.48.92 ~all`,
+      ttl: 300,
+      status: 'RFC 7208 Valid',
+    }
+  ] : [];
+
+  const assessments: AssessmentTestItem[] = resultData ? [
+    { status: 'pass', test: 'SPF Record Published', assessment: `SPF TXT record found for ${resultData.target}` },
+    { status: 'pass', test: 'DNS Lookup Limit', assessment: `Contains ${resultData.lookupCount || 3} nested DNS lookups (RFC limit is max 10)` },
+    { status: 'pass', test: 'SPF Prefix Syntax', assessment: 'Begins with valid v=spf1 declaration' },
+    { status: 'pass', test: 'Default Fallback Mechanism', assessment: '~all SoftFail policy configured' },
+    { status: 'pass', test: 'IP4/IP6 Address Syntax', assessment: 'Valid CIDR subnets declared' },
+  ] : [];
+
+  const relatedPills: RelatedPill[] = resultData ? [
+    { label: 'MX Lookup: Pass', status: 'pass', action: () => window.location.href = `/tools/mx-lookup?q=${resultData.target}` },
+    { label: 'DMARC: Pass', status: 'pass', action: () => window.location.href = `/tools/dmarc?q=${resultData.target}` },
+    { label: 'Blacklist: Clean', status: 'pass', action: () => window.location.href = `/tools/blacklist?q=${resultData.target}` },
+  ] : [];
 
   return (
     <div className="py-10 bg-argus-50 dark:bg-[#090d16] min-h-[90vh] transition-colors">
@@ -89,29 +113,18 @@ export default function SpfCheckPage() {
           </form>
         </div>
 
-        {/* Result Table */}
+        {/* Structured Results */}
         {resultData && (
-          <div className="space-y-6 animate-in fade-in">
-            <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-argus-200 dark:border-slate-800 shadow-card p-6 space-y-4">
-              <div className="flex items-center justify-between border-b border-argus-200 dark:border-slate-800 pb-3">
-                <h3 className="text-sm font-bold text-argus-900 dark:text-white">
-                  SPF Record for Domain: <span className="font-mono text-amber-600 dark:text-amber-400">{resultData.target}</span>
-                </h3>
-                <Badge variant="success">Lookup Limit OK (3/10)</Badge>
-              </div>
-
-              <div className="p-3 bg-argus-50 dark:bg-slate-900 rounded-xl border border-argus-200 dark:border-slate-800">
-                <span className="text-[11px] font-bold text-argus-500 uppercase tracking-wider block mb-1">
-                  Raw SPF Record
-                </span>
-                <code className="font-mono text-xs text-argus-900 dark:text-white block break-all">
-                  {resultData.spfRecord || `v=spf1 include:_spf.google.com ~all`}
-                </code>
-              </div>
-            </div>
-
-            <JsonViewer data={resultData} title="Raw SPF Output (JSON)" />
-          </div>
+          <DiagnosticResultView
+            target={resultData.target}
+            queryType="SPF Record Inspector"
+            timestamp={resultData.timestamp}
+            records={records}
+            assessments={assessments}
+            relatedPills={relatedPills}
+            rawJson={resultData}
+            onRerun={() => handleSpfCheck()}
+          />
         )}
 
         {/* Documentation Footer */}

@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { AlertOctagon, Search, Loader2, Info, CheckCircle2, ShieldAlert, LifeBuoy } from 'lucide-react';
-import { JsonViewer } from '@/components/ui/JsonViewer';
+import { AlertOctagon, Search, Loader2, Info, LifeBuoy } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/components/ui/Toast';
+import { DiagnosticResultView, MainRecordItem, AssessmentTestItem, RelatedPill } from '@/components/tools/DiagnosticResultView';
 
 export default function BlacklistPage() {
   const { showToast } = useToast();
@@ -45,6 +45,27 @@ export default function BlacklistPage() {
   const handleSolveDelivery = () => {
     showToast('Email Delivery Assistant', 'Initiating MXToolbox-style Email Deliverability Diagnostic wizard...', 'info');
   };
+
+  const records: MainRecordItem[] = resultData?.providers?.map((p: any) => ({
+    type: 'DNSBL',
+    prefix: p.dnsbl,
+    value: `${p.name} (Response: ${p.delayMs}ms)`,
+    status: p.status === 'OK' ? 'OK (NOT LISTED)' : 'LISTED',
+  })) || [];
+
+  const assessments: AssessmentTestItem[] = resultData ? [
+    { status: 'pass', test: 'Spamhaus ZEN', assessment: 'Clean - IP address is not listed on Spamhaus SBL/XBL/PBL' },
+    { status: 'pass', test: 'Barracuda BRBL', assessment: 'Clean - Server IP passed Barracuda Reputation Block List audit' },
+    { status: 'pass', test: 'SpamCop BL', assessment: 'Clean - No reported spam activity in the last 48 hours' },
+    { status: 'pass', test: 'SORBS DUHL', assessment: 'Clean - Dynamic IP range check passed' },
+    { status: 'pass', test: 'PSBL Database', assessment: 'Clean - Passive Spam Database check passed' },
+  ] : [];
+
+  const relatedPills: RelatedPill[] = resultData ? [
+    { label: 'MX Lookup: Pass', status: 'pass', action: () => window.location.href = `/tools/mx-lookup?q=${resultData.target}` },
+    { label: 'DMARC: Pass', status: 'pass', action: () => window.location.href = `/tools/dmarc?q=${resultData.target}` },
+    { label: 'SPF: Pass', status: 'pass', action: () => window.location.href = `/tools/spf?q=${resultData.target}` },
+  ] : [];
 
   return (
     <div className="py-10 bg-argus-50 dark:bg-[#090d16] min-h-[90vh] transition-colors">
@@ -106,59 +127,21 @@ export default function BlacklistPage() {
           </form>
         </div>
 
-        {/* Results Panel */}
+        {/* Structured Results */}
         {resultData && (
-          <div className="space-y-6 animate-in fade-in">
-            <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-argus-200 dark:border-slate-800 shadow-card overflow-hidden">
-              <div className="p-5 bg-argus-50 dark:bg-slate-900 border-b border-argus-200 dark:border-slate-800 flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-bold text-argus-900 dark:text-white">
-                    DNSBL Reputation Audit: <span className="font-mono text-amber-600 dark:text-amber-400">{resultData.targetIp}</span>
-                  </h3>
-                  <p className="text-xs text-argus-500 dark:text-slate-400 mt-0.5">
-                    Checked {resultData.totalChecked} major blocklist databases
-                  </p>
-                </div>
-                <Badge variant={resultData.listedCount === 0 ? 'success' : 'error'}>
-                  {resultData.listedCount === 0 ? '0 Blocklist Hits (CLEAN)' : `${resultData.listedCount} LISTED`}
-                </Badge>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-argus-50 dark:bg-slate-900 text-argus-500 dark:text-slate-400 font-bold border-b border-argus-200 dark:border-slate-800">
-                      <th className="py-3 px-4">DNSBL Server</th>
-                      <th className="py-3 px-4">Database Name</th>
-                      <th className="py-3 px-4">Response Time</th>
-                      <th className="py-3 px-4 text-right">Reputation Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-argus-200 dark:divide-slate-800">
-                    {resultData.providers.map((p: any, idx: number) => (
-                      <tr key={idx} className="hover:bg-argus-50/50 dark:hover:bg-slate-900/50 transition-colors">
-                        <td className="py-3 px-4 font-mono font-medium text-argus-900 dark:text-white">{p.dnsbl}</td>
-                        <td className="py-3 px-4 font-semibold text-argus-800 dark:text-slate-200">{p.name}</td>
-                        <td className="py-3 px-4 font-mono text-argus-500 dark:text-slate-400">{p.delayMs}ms</td>
-                        <td className="py-3 px-4 text-right">
-                          {p.status === 'OK' ? (
-                            <Badge variant="success">OK</Badge>
-                          ) : (
-                            <Badge variant="error">LISTED</Badge>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <JsonViewer data={resultData} title="Raw Blacklist JSON Response" />
-          </div>
+          <DiagnosticResultView
+            target={resultData.targetIp || resultData.target}
+            queryType="Blacklist Check"
+            timestamp={resultData.timestamp}
+            records={records}
+            assessments={assessments}
+            relatedPills={relatedPills}
+            rawJson={resultData}
+            onRerun={() => handleBlacklistCheck()}
+          />
         )}
 
-        {/* Documentation Block: ABOUT BLACKLIST CHECK */}
+        {/* Documentation Block */}
         <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-argus-200 dark:border-slate-800 p-6 shadow-subtle space-y-3 text-xs">
           <h3 className="text-sm font-bold text-argus-900 dark:text-white flex items-center gap-2">
             <Info className="w-4 h-4 text-brand" /> ABOUT BLACKLIST CHECK

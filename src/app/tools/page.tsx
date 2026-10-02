@@ -98,7 +98,7 @@ export default function ToolsIndexPage() {
                 <div className="pt-4 border-t border-argus-100 flex items-center justify-between">
                   <span className="text-xs text-argus-400 font-mono">{cat.sample}</span>
                   <Link
-                    href={`/tools/${cat.id}`}
+                    href={cat.id === 'media-docs' ? '/tools/media-docs' : `/tools/${cat.id}`}
                     className="px-5 py-2.5 bg-brand hover:bg-brand-hover text-white text-xs font-semibold rounded-xl shadow-card transition-all flex items-center gap-2"
                   >
                     <span>Launch Module</span>
