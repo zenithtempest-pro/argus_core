@@ -373,7 +373,7 @@ export default function HeaderAnalyzerPage() {
                     <span className="text-[11px] font-bold text-argus-500 dark:text-slate-400 block uppercase">PhishGuard Score</span>
                     <span className="text-2xl font-black font-mono text-argus-900 dark:text-white">{analysis.riskScore}/100</span>
                   </div>
-                  <Badge variant={analysis.riskLevel === 'MALICIOUS' ? 'danger' : analysis.riskLevel === 'SUSPICIOUS' ? 'warning' : 'success'} size="md">
+                  <Badge variant={analysis.riskLevel === 'MALICIOUS' ? 'error' : analysis.riskLevel === 'SUSPICIOUS' ? 'warning' : 'success'} size="md">
                     {analysis.riskLevel} RISK
                   </Badge>
                 </div>
