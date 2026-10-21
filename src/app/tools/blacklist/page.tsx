@@ -43,7 +43,7 @@ export default function BlacklistPage() {
   };
 
   const handleSolveDelivery = () => {
-    showToast('Email Delivery Assistant', 'Initiating MXToolbox-style Email Deliverability Diagnostic wizard...', 'info');
+    showToast('Email Delivery Assistant', 'Initiating Universal Enterprise Email Deliverability Diagnostic wizard...', 'info');
   };
 
   const records: MainRecordItem[] = resultData?.providers?.map((p: any) => ({
@@ -104,7 +104,7 @@ export default function BlacklistPage() {
               />
             </div>
 
-            {/* Action Button 1: MXToolbox Orange Blacklist Check */}
+            {/* Action Button 1: Orange Blacklist Check */}
             <button
               type="submit"
               disabled={loading}
@@ -114,7 +114,7 @@ export default function BlacklistPage() {
               <span>{loading ? 'Scanning DNSBLs...' : 'Blacklist Check'}</span>
             </button>
 
-            {/* Action Button 2: MXToolbox Cyan Solve Email Delivery Problems */}
+            {/* Action Button 2: Cyan Solve Email Delivery Problems */}
             <button
               type="button"
               onClick={handleSolveDelivery}

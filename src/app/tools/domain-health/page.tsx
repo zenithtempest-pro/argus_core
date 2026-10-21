@@ -19,6 +19,7 @@ import {
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/components/ui/Toast';
 import { DiagnosticResultView, MainRecordItem, AssessmentTestItem, RelatedPill } from '@/components/tools/DiagnosticResultView';
+import { AuthBlurGate } from '@/components/auth/AuthBlurGate';
 
 export default function DomainHealthPage() {
   const { showToast } = useToast();
@@ -232,72 +233,77 @@ export default function DomainHealthPage() {
 
             </div>
 
-            {/* Detailed Findings Table */}
-            <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-argus-200 dark:border-slate-800 shadow-card overflow-hidden">
-              <div className="p-4 bg-argus-50/70 dark:bg-slate-900/80 border-b border-argus-200 dark:border-slate-800 flex items-center justify-between">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-argus-800 dark:text-slate-200 flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-amber-500" /> Detailed Domain Findings & Assessment Table
-                </h3>
-                <Badge variant="success">Overall Score: 98/100</Badge>
-              </div>
+            {/* Detailed Findings and Records gated by AuthBlurGate */}
+            <AuthBlurGate redirectPath="/tools/domain-health">
+              <div className="space-y-6">
+                {/* Detailed Findings Table */}
+                <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-argus-200 dark:border-slate-800 shadow-card overflow-hidden">
+                  <div className="p-4 bg-argus-50/70 dark:bg-slate-900/80 border-b border-argus-200 dark:border-slate-800 flex items-center justify-between">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-argus-800 dark:text-slate-200 flex items-center gap-2">
+                      <Activity className="w-4 h-4 text-amber-500" /> Detailed Domain Findings & Assessment Table
+                    </h3>
+                    <Badge variant="success">Overall Score: 98/100</Badge>
+                  </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-argus-50/50 dark:bg-slate-900/50 text-argus-500 dark:text-slate-400 font-bold border-b border-argus-200 dark:border-slate-800">
-                      <th className="py-3 px-4 w-16 text-center">Status</th>
-                      <th className="py-3 px-4 w-28">Category</th>
-                      <th className="py-3 px-4 w-48">Host</th>
-                      <th className="py-3 px-4">Result / Description</th>
-                      <th className="py-3 px-4 text-right">More Info</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-argus-200 dark:divide-slate-800">
-                    {findingsList.map((f: any, idx: number) => (
-                      <tr key={idx} className="hover:bg-argus-50/50 dark:hover:bg-slate-900/50 transition-colors">
-                        <td className="py-3.5 px-4 text-center">
-                          <div className="flex justify-center">
-                            {f.status === 'pass' && <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />}
-                            {f.status === 'warn' && <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />}
-                            {f.status === 'fail' && <XCircle className="w-4 h-4 text-rose-500 shrink-0" />}
-                          </div>
-                        </td>
-                        <td className="py-3.5 px-4 font-mono font-bold uppercase text-amber-600 dark:text-amber-400">
-                          {f.category}
-                        </td>
-                        <td className="py-3.5 px-4 font-mono font-semibold text-argus-900 dark:text-white">
-                          {f.host}
-                        </td>
-                        <td className="py-3.5 px-4 text-argus-700 dark:text-slate-300">
-                          {f.result}
-                        </td>
-                        <td className="py-3.5 px-4 text-right">
-                          <a
-                            href={f.link ? `${f.link}?q=${resultData.target}` : '#'}
-                            className="text-amber-600 dark:text-amber-400 hover:underline font-semibold text-[11px] inline-flex items-center gap-1"
-                          >
-                            <span>Details</span>
-                            <ExternalLink className="w-3 h-3" />
-                          </a>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-argus-50/50 dark:bg-slate-900/50 text-argus-500 dark:text-slate-400 font-bold border-b border-argus-200 dark:border-slate-800">
+                          <th className="py-3 px-4 w-16 text-center">Status</th>
+                          <th className="py-3 px-4 w-28">Category</th>
+                          <th className="py-3 px-4 w-48">Host</th>
+                          <th className="py-3 px-4">Result / Description</th>
+                          <th className="py-3 px-4 text-right">More Info</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-argus-200 dark:divide-slate-800">
+                        {findingsList.map((f: any, idx: number) => (
+                          <tr key={idx} className="hover:bg-argus-50/50 dark:hover:bg-slate-900/50 transition-colors">
+                            <td className="py-3.5 px-4 text-center">
+                              <div className="flex justify-center">
+                                {f.status === 'pass' && <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />}
+                                {f.status === 'warn' && <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />}
+                                {f.status === 'fail' && <XCircle className="w-4 h-4 text-rose-500 shrink-0" />}
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-4 font-mono font-bold uppercase text-amber-600 dark:text-amber-400">
+                              {f.category}
+                            </td>
+                            <td className="py-3.5 px-4 font-mono font-semibold text-argus-900 dark:text-white">
+                              {f.host}
+                            </td>
+                            <td className="py-3.5 px-4 text-argus-700 dark:text-slate-300">
+                              {f.result}
+                            </td>
+                            <td className="py-3.5 px-4 text-right">
+                              <a
+                                href={f.link ? `${f.link}?q=${resultData.target}` : '#'}
+                                className="text-amber-600 dark:text-amber-400 hover:underline font-semibold text-[11px] inline-flex items-center gap-1"
+                              >
+                                <span>Details</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
 
-            {/* Diagnostic Result View Wrapper */}
-            <DiagnosticResultView
-              target={resultData.target}
-              queryType="Domain Health Audit"
-              timestamp={resultData.timestamp}
-              records={records}
-              assessments={assessments}
-              relatedPills={relatedPills}
-              rawJson={resultData}
-              onRerun={() => handleDomainHealthCheck()}
-            />
+                {/* Diagnostic Result View Wrapper */}
+                <DiagnosticResultView
+                  target={resultData.target}
+                  queryType="Domain Health Audit"
+                  timestamp={resultData.timestamp}
+                  records={records}
+                  assessments={assessments}
+                  relatedPills={relatedPills}
+                  rawJson={resultData}
+                  onRerun={() => handleDomainHealthCheck()}
+                />
+              </div>
+            </AuthBlurGate>
 
           </div>
         )}

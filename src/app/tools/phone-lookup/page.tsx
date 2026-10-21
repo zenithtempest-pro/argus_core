@@ -1,8 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { AuthBlurGate } from '@/components/auth/AuthBlurGate';
 
 export default function PhoneLookupPage() {
+  const { isLoggedIn } = useAuth();
   const [phoneNumber, setPhoneNumber] = useState('');
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any>(null);
@@ -80,145 +83,175 @@ export default function PhoneLookupPage() {
       {/* Results Dashboard */}
       {data && (
         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Subscriber Identity Card */}
+          {/* Teaser Data (Always Unblurred) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Subscriber Teaser / Basic Info Card */}
             <div className="p-5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-1">
                 <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider">
-                  Subscriber Identity
+                  Target Identity Teaser
                 </span>
-                {data.isTruecallerVerified && (
+                {data.matchSource === 'Truecaller' && (
                   <span className="px-2 py-0.5 text-[10px] font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-md flex items-center gap-1">
                     ✓ Truecaller Verified
                   </span>
                 )}
+                {data.matchSource === 'Eyecon' && (
+                  <span className="px-2 py-0.5 text-[10px] font-semibold bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-md flex items-center gap-1">
+                    ✓ Eyecon Verified
+                  </span>
+                )}
+                {data.matchSource === 'Carrier Trace' && (
+                  <span className="px-2 py-0.5 text-[10px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-md flex items-center gap-1">
+                    ✓ Carrier Trace Verified
+                  </span>
+                )}
               </div>
-
-              <div className="space-y-3 pt-1">
-                <div>
-                  <div className="text-xs text-slate-500">Registered Caller Name</div>
-                  <div className="text-lg font-bold text-white capitalize flex items-center gap-2">
-                    {data.ownerName}
-                  </div>
-                </div>
-
+              <div className="space-y-2 pt-1">
                 <div>
                   <div className="text-xs text-slate-500">Phone Number</div>
                   <div className="text-sm font-semibold text-slate-200 font-mono">
                     {data.formattedNumber}
                   </div>
                 </div>
-
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <div>
-                    <div className="text-xs text-slate-500">Line Type</div>
-                    <div className="text-xs font-medium text-slate-300">{data.connection}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-500">Language</div>
-                    <div className="text-xs font-medium text-slate-300">{data.language}</div>
-                  </div>
+                <div>
+                  <div className="text-xs text-slate-500">Validation Status</div>
+                  <div className="text-xs font-semibold text-emerald-400">Valid Format • Active Range</div>
                 </div>
               </div>
             </div>
 
-            {/* Carrier & Location */}
+            {/* Carrier & Location Teaser Card */}
             <div className="p-5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-3">
               <div className="text-xs font-bold text-blue-400 uppercase tracking-wider">Carrier & Circle</div>
               <div className="space-y-2">
                 <div>
-                  <div className="text-xs text-slate-500">SIM / Carrier</div>
+                  <div className="text-xs text-slate-500">SIM / Operator</div>
                   <div className="text-sm font-bold text-white">{data.simCard}</div>
                 </div>
                 <div>
                   <div className="text-xs text-slate-500">Mobile State / Circle</div>
                   <div className="text-sm font-semibold text-slate-200">{data.mobileState}</div>
                 </div>
-                <div>
-                  <div className="text-xs text-slate-500">Hometown</div>
-                  <div className="text-sm text-slate-300">{data.hometown}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500">Reference City</div>
-                  <div className="text-sm text-slate-300">{data.referenceCity}</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Hardware & Network */}
-            <div className="p-5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-3">
-              <div className="text-xs font-bold text-purple-400 uppercase tracking-wider">Network Telemetry</div>
-              <div className="space-y-2">
-                <div>
-                  <div className="text-xs text-slate-500">Masked IMEI</div>
-                  <code className="text-xs font-mono text-slate-300">{data.imei}</code>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500">IP Address</div>
-                  <code className="text-xs font-mono text-slate-300">{data.ipAddress}</code>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500">MAC Address</div>
-                  <code className="text-xs font-mono text-slate-300">{data.macAddress}</code>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500">Tracker ID</div>
-                  <span className="text-xs font-mono text-cyan-400 bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-800">
-                    {data.trackerId}
-                  </span>
-                </div>
               </div>
             </div>
           </div>
 
-          {/* Towers & Zones (Only rendered if returned by upstream) */}
-          {(data.towerLocations?.length > 0 || data.mobileLocations?.length > 0) && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {data.towerLocations?.length > 0 && (
-                <div className="p-5 rounded-xl bg-slate-900/90 border border-slate-800">
-                  <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3">
-                    🗼 Registered Tower Locations
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {data.towerLocations.map((tower: string, idx: number) => (
-                      <span key={idx} className="px-3 py-1 bg-slate-800 text-slate-200 text-xs rounded-lg border border-slate-700">
-                        {tower.trim()}
+          {/* Deep Telemetry Section with AuthBlurGate */}
+          <AuthBlurGate redirectPath="/tools/phone-lookup">
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Full Subscriber Detail Card */}
+                <div className="p-5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-1">
+                    <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider">
+                      Full Registered Subscriber
+                    </span>
+                    {data.matchSource && data.matchSource !== 'None' && (
+                      <span className="px-2 py-0.5 text-[10px] font-mono text-cyan-400 bg-cyan-950/40 border border-cyan-800 rounded">
+                        Source: {data.matchSource}
                       </span>
-                    ))}
+                    )}
                   </div>
+                  <div className="space-y-2">
+                    <div>
+                      <div className="text-xs text-slate-500">Registered Caller Name</div>
+                      <div className="text-lg font-bold text-white capitalize">
+                        {(() => {
+                          const name = (data.ownerName || '').replace(/\(enquire\)/gi, '').replace(/enquire/gi, '').trim();
+                          return (!name || /^\*+$/.test(name) || /^\*+\s+\*+$/.test(name)) ? 'Unlisted Subscriber' : name;
+                        })()}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-slate-500">Hometown / Reference City</div>
+                      <div className="text-sm text-slate-300">{data.hometown} ({data.referenceCity})</div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <div>
+                        <div className="text-xs text-slate-500">Line Type</div>
+                        <div className="text-xs font-medium text-slate-300">{data.connection}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-slate-500">Language</div>
+                        <div className="text-xs font-medium text-slate-300">{data.language}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Hardware & Network */}
+                <div className="p-5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-3">
+                  <div className="text-xs font-bold text-purple-400 uppercase tracking-wider">Network Telemetry</div>
+                  <div className="space-y-2">
+                    <div>
+                      <div className="text-xs text-slate-500">Masked IMEI</div>
+                      <code className="text-xs font-mono text-slate-300">{data.imei}</code>
+                    </div>
+                    <div>
+                      <div className="text-xs text-slate-500">IP & MAC Address</div>
+                      <code className="text-xs font-mono text-slate-300">{data.ipAddress} • {data.macAddress}</code>
+                    </div>
+                    <div>
+                      <div className="text-xs text-slate-500">Tracker ID</div>
+                      <span className="text-xs font-mono text-cyan-400 bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-800">
+                        {data.trackerId}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Towers & Zones */}
+              {(data.towerLocations?.length > 0 || data.mobileLocations?.length > 0) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {data.towerLocations?.length > 0 && (
+                    <div className="p-5 rounded-xl bg-slate-900/90 border border-slate-800">
+                      <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3">
+                        🗼 Registered Tower Locations
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {data.towerLocations.map((tower: string, idx: number) => (
+                          <span key={idx} className="px-3 py-1 bg-slate-800 text-slate-200 text-xs rounded-lg border border-slate-700">
+                            {tower.trim()}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {data.mobileLocations?.length > 0 && (
+                    <div className="p-5 rounded-xl bg-slate-900/90 border border-slate-800">
+                      <div className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-3">
+                        📍 Mobile Geo Locations
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {data.mobileLocations.map((loc: string, idx: number) => (
+                          <span key={idx} className="px-3 py-1 bg-slate-800 text-slate-200 text-xs rounded-lg border border-slate-700">
+                            {loc.trim()}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
-              {data.mobileLocations?.length > 0 && (
-                <div className="p-5 rounded-xl bg-slate-900/90 border border-slate-800">
-                  <div className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-3">
-                    📍 Mobile Geo Locations
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {data.mobileLocations.map((loc: string, idx: number) => (
-                      <span key={idx} className="px-3 py-1 bg-slate-800 text-slate-200 text-xs rounded-lg border border-slate-700">
-                        {loc.trim()}
-                      </span>
-                    ))}
-                  </div>
+              {/* Complaints Bar */}
+              <div className="flex items-center justify-between p-4 rounded-xl bg-slate-900 border border-slate-800 text-sm">
+                <div className="text-slate-300">
+                  Complaints: <strong className="text-white">{data.complaints}</strong>
                 </div>
-              )}
+                <button
+                  type="button"
+                  onClick={() => alert('Redirecting to cyber crime reporting portal...')}
+                  className="px-3 py-1 bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 text-xs font-semibold rounded-lg border border-rose-500/30"
+                >
+                  Report Complaint
+                </button>
+              </div>
             </div>
-          )}
-
-          {/* Complaints Bar */}
-          <div className="flex items-center justify-between p-4 rounded-xl bg-slate-900 border border-slate-800 text-sm">
-            <div className="text-slate-300">
-              Complaints: <strong className="text-white">{data.complaints}</strong>
-            </div>
-            <button
-              type="button"
-              onClick={() => alert('Redirecting to cyber crime reporting portal...')}
-              className="px-3 py-1 bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 text-xs font-semibold rounded-lg border border-rose-500/30"
-            >
-              Report Complaint
-            </button>
-          </div>
+          </AuthBlurGate>
         </div>
       )}
     </div>

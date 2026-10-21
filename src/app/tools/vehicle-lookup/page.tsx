@@ -5,8 +5,11 @@ import { Car, Search, Loader2, Info, CheckCircle2, Cpu, Wrench, Shield, Globe, C
 import { JsonViewer } from '@/components/ui/JsonViewer';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/components/ui/Toast';
+import { useAuth } from '@/context/AuthContext';
+import { AuthBlurGate } from '@/components/auth/AuthBlurGate';
 
 export default function VehicleLookupPage() {
+  const { isLoggedIn } = useAuth();
   const { showToast } = useToast();
   const [vin, setVin] = useState('');
   const [loading, setLoading] = useState(false);
@@ -140,10 +143,11 @@ export default function VehicleLookupPage() {
         {/* Results Panel */}
         {resultData && !loading && (
           <div className="space-y-6 animate-in fade-in">
-            <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-argus-200 dark:border-slate-800 shadow-card p-6 space-y-6">
+            {/* Teaser Header Card (Always Visible) */}
+            <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-argus-200 dark:border-slate-800 shadow-card p-6 space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-argus-200 dark:border-slate-800 pb-4 gap-2">
                 <h3 className="text-sm font-bold text-argus-900 dark:text-white flex items-center gap-2">
-                  <Car className="w-4 h-4 text-blue-500" /> Decoded Vehicle Specs: <span className="font-mono text-blue-600 dark:text-blue-400">{resultData.vin}</span>
+                  <Car className="w-4 h-4 text-blue-500" /> VIN Teaser: <span className="font-mono text-blue-600 dark:text-blue-400">{resultData.vin}</span>
                 </h3>
                 <div className="flex items-center gap-2">
                   <Badge variant="info" size="md">
@@ -155,48 +159,54 @@ export default function VehicleLookupPage() {
                 </div>
               </div>
 
-              {/* Specs Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
-                
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <div className="p-3.5 bg-argus-50 dark:bg-slate-900 rounded-xl border border-argus-200 dark:border-slate-800">
                   <span className="text-argus-500 dark:text-slate-400 block mb-1">Manufacturer & Make</span>
                   <strong className="text-argus-900 dark:text-white text-sm font-sans">{resultData.make}</strong>
                 </div>
-
-                <div className="p-3.5 bg-argus-50 dark:bg-slate-900 rounded-xl border border-argus-200 dark:border-slate-800">
-                  <span className="text-argus-500 dark:text-slate-400 block mb-1">Model / Variant</span>
-                  <strong className="text-argus-900 dark:text-white text-sm font-sans">{resultData.model}</strong>
-                </div>
-
-                <div className="p-3.5 bg-argus-50 dark:bg-slate-900 rounded-xl border border-argus-200 dark:border-slate-800">
-                  <span className="text-argus-500 dark:text-slate-400 block mb-1">Model Year (10th Char)</span>
-                  <strong className="text-argus-900 dark:text-white text-sm font-mono">{resultData.year}</strong>
-                </div>
-
                 <div className="p-3.5 bg-argus-50 dark:bg-slate-900 rounded-xl border border-argus-200 dark:border-slate-800">
                   <span className="text-argus-500 dark:text-slate-400 block mb-1">Country of Origin</span>
                   <strong className="text-argus-900 dark:text-white text-sm">{resultData.countryOfOrigin}</strong>
                 </div>
-
-                <div className="p-3.5 bg-argus-50 dark:bg-slate-900 rounded-xl border border-argus-200 dark:border-slate-800">
-                  <span className="text-argus-500 dark:text-slate-400 block mb-1">Assembly Plant</span>
-                  <strong className="text-argus-900 dark:text-white text-sm">{resultData.assemblyPlant}</strong>
-                </div>
-
-                <div className="p-3.5 bg-argus-50 dark:bg-slate-900 rounded-xl border border-argus-200 dark:border-slate-800">
-                  <span className="text-argus-500 dark:text-slate-400 block mb-1">Powertrain / Engine</span>
-                  <strong className="text-argus-900 dark:text-white text-sm">{resultData.engineDisplacement}</strong>
-                </div>
-
-              </div>
-
-              <div className="flex items-center gap-2 pt-2 text-[11px] text-argus-500 dark:text-slate-400">
-                <Database className="w-3.5 h-3.5 text-blue-500" />
-                <span>Intelligence Provider: <strong className="text-argus-700 dark:text-slate-300 font-sans">{resultData.dataSource}</strong></span>
               </div>
             </div>
 
-            <JsonViewer data={resultData} title="Raw VIN Intelligence Output (JSON)" />
+            {/* Deep Specs with AuthBlurGate */}
+            <AuthBlurGate redirectPath="/tools/vehicle-lookup">
+              <div className="space-y-6">
+                <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-argus-200 dark:border-slate-800 shadow-card p-6 space-y-6">
+                  <h4 className="text-xs font-bold text-argus-500 dark:text-slate-400 uppercase tracking-wider">Deep Vehicle Engineering Telemetry</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
+                    <div className="p-3.5 bg-argus-50 dark:bg-slate-900 rounded-xl border border-argus-200 dark:border-slate-800">
+                      <span className="text-argus-500 dark:text-slate-400 block mb-1">Model / Variant</span>
+                      <strong className="text-argus-900 dark:text-white text-sm font-sans">{resultData.model}</strong>
+                    </div>
+
+                    <div className="p-3.5 bg-argus-50 dark:bg-slate-900 rounded-xl border border-argus-200 dark:border-slate-800">
+                      <span className="text-argus-500 dark:text-slate-400 block mb-1">Model Year (10th Char)</span>
+                      <strong className="text-argus-900 dark:text-white text-sm font-mono">{resultData.year}</strong>
+                    </div>
+
+                    <div className="p-3.5 bg-argus-50 dark:bg-slate-900 rounded-xl border border-argus-200 dark:border-slate-800">
+                      <span className="text-argus-500 dark:text-slate-400 block mb-1">Assembly Plant</span>
+                      <strong className="text-argus-900 dark:text-white text-sm">{resultData.assemblyPlant}</strong>
+                    </div>
+
+                    <div className="p-3.5 bg-argus-50 dark:bg-slate-900 rounded-xl border border-argus-200 dark:border-slate-800">
+                      <span className="text-argus-500 dark:text-slate-400 block mb-1">Powertrain / Engine</span>
+                      <strong className="text-argus-900 dark:text-white text-sm">{resultData.engineDisplacement}</strong>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-2 text-[11px] text-argus-500 dark:text-slate-400">
+                    <Database className="w-3.5 h-3.5 text-blue-500" />
+                    <span>Intelligence Provider: <strong className="text-argus-700 dark:text-slate-300 font-sans">{resultData.dataSource}</strong></span>
+                  </div>
+                </div>
+
+                <JsonViewer data={resultData} title="Raw VIN Intelligence Output (JSON)" />
+              </div>
+            </AuthBlurGate>
           </div>
         )}
 

@@ -1,18 +1,25 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Download, Terminal, Search, Shield, Copy, Check, Filter, Loader2, RefreshCw } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { Download, Terminal, Search, Shield, Copy, Check, Filter, Loader2, RefreshCw, Lock, UserPlus, LogIn, X } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/components/ui/Toast';
 import { scriptRepository, PythonScriptItem } from '@/data/scripts';
+import { useAuth } from '@/context/AuthContext';
 
 export default function DownloadsPage() {
+  const router = useRouter();
+  const { isLoggedIn } = useAuth();
   const { showToast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [copiedChecksum, setCopiedChecksum] = useState<string | null>(null);
   const [scripts, setScripts] = useState<PythonScriptItem[]>(scriptRepository);
   const [loading, setLoading] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [selectedScript, setSelectedScript] = useState<PythonScriptItem | null>(null);
 
   const fetchDynamicScripts = async () => {
     setLoading(true);
@@ -41,8 +48,15 @@ export default function DownloadsPage() {
   }, []);
 
   const handleDownload = (script: PythonScriptItem) => {
+    if (!isLoggedIn) {
+      setSelectedScript(script);
+      setShowAuthModal(true);
+      return;
+    }
+
+    const downloadUrl = `/api/scripts/download?file=${encodeURIComponent(script.filename)}`;
     const a = document.createElement('a');
-    a.href = script.downloadUrl;
+    a.href = downloadUrl;
     a.download = script.filename;
     document.body.appendChild(a);
     a.click();
@@ -66,7 +80,7 @@ export default function DownloadsPage() {
   });
 
   return (
-    <div className="py-12 bg-argus-50 dark:bg-[#090d16] min-h-[90vh] transition-colors">
+    <div className="py-12 bg-argus-50 dark:bg-[#090d16] min-h-[90vh] transition-colors relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
         
         {/* Page Header */}
@@ -192,6 +206,48 @@ export default function DownloadsPage() {
         </div>
 
       </div>
+
+      {/* Auth Gating Modal */}
+      {showAuthModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-[#131b2e] border border-argus-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5 relative">
+            <button
+              onClick={() => setShowAuthModal(false)}
+              className="absolute top-4 right-4 p-1 text-argus-400 hover:text-argus-700 dark:hover:text-slate-200"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-500 flex items-center justify-center mx-auto">
+              <Lock className="w-6 h-6" />
+            </div>
+
+            <div className="text-center space-y-2">
+              <h3 className="text-lg font-bold text-argus-900 dark:text-white">Authentication Required</h3>
+              <p className="text-xs text-argus-600 dark:text-slate-300 leading-relaxed">
+                Please create a free ArgusCore account or log in to download verified Python forensic tools like <code className="font-mono font-bold text-brand dark:text-blue-400">{selectedScript?.filename || 'script.py'}</code>.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2.5 pt-2">
+              <Link
+                href="/auth/signup?redirect=/downloads"
+                className="w-full py-2.5 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-xl shadow-card transition-all flex items-center justify-center gap-2"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>Create Free ArgusCore Account</span>
+              </Link>
+              <Link
+                href="/auth/login?redirect=/downloads"
+                className="w-full py-2.5 bg-argus-100 dark:bg-slate-800 hover:bg-argus-200 dark:hover:bg-slate-700 text-argus-800 dark:text-slate-200 text-xs font-semibold rounded-xl border border-argus-200 dark:border-slate-700 transition-all flex items-center justify-center gap-2"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>Log In to Account</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

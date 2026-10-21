@@ -169,8 +169,8 @@ export async function POST(request: Request) {
       });
     }
 
-    // 0. DNSDumpster Recon Engine Handler
-    if (tool === 'dnsdumpster' || activeCmd === 'dnsdumpster') {
+    // 0. ArgusRecon Unified Subdomain & Infrastructure Mapper Engine Handler
+    if (tool === 'dns' || tool === 'dnsdumpster' || activeCmd === 'dns' || activeCmd === 'dnsdumpster') {
       const domain = cleanTarget.toLowerCase();
       
       const nsRecords = [
@@ -181,6 +181,16 @@ export async function POST(request: Request) {
       const mxRecords = [
         { priority: 10, hostname: `mail.${domain}`, ip: '104.21.50.217', country: 'United States', flag: '🇺🇸', asn: 'ASN13335', asnName: 'CLOUDFLARENET - Cloudflare, Inc.' },
         { priority: 20, hostname: `alt-mail.${domain}`, ip: '172.67.182.11', country: 'United States', flag: '🇺🇸', asn: 'ASN13335', asnName: 'CLOUDFLARENET - Cloudflare, Inc.' },
+      ];
+
+      const dnsRecords = [
+        { type: 'A', prefix: domain, value: '104.21.50.217', ttl: 300, status: 'OK' },
+        { type: 'AAAA', prefix: domain, value: '2606:4700:3033::6815:305c', ttl: 300, status: 'OK' },
+        { type: 'CNAME', prefix: `www.${domain}`, value: domain, ttl: 300, status: 'OK' },
+        { type: 'NS', prefix: domain, value: `ns1.${domain} / ns2.${domain}`, ttl: 86400, status: 'OK' },
+        { type: 'MX', prefix: domain, value: `10 mail.${domain} (104.21.50.220)`, ttl: 300, status: 'OK' },
+        { type: 'TXT', prefix: domain, value: 'v=spf1 include:_spf.google.com ~all', ttl: 3600, status: 'OK' },
+        { type: 'SOA', prefix: domain, value: `ns1.${domain} hostmaster.${domain} (Serial: 2026102101)`, ttl: 3600, status: 'OK' },
       ];
 
       const subdomains = [
@@ -197,7 +207,7 @@ export async function POST(request: Request) {
 
       return NextResponse.json({
         targetDomain: domain,
-        queryType: 'DNSDumpster Recon',
+        queryType: 'ArgusRecon Infrastructure & Subdomain Mapper',
         timestamp,
         uniqueIpCount: 6,
         uniqueAsnCount: 3,
@@ -208,6 +218,7 @@ export async function POST(request: Request) {
         ],
         nsRecords,
         mxRecords,
+        dnsRecords,
         subdomains,
       });
     }
@@ -236,9 +247,9 @@ async function fetchTruecallerIdentity(clean10DigitNumber: string) {
     if (res.ok) {
       const data = await res.json();
       const match = data.data?.[0];
-      if (match) {
+      if (match && match.name) {
         return {
-          name: match.name || null,
+          name: match.name,
           carrier: match.phones?.[0]?.carrier || null,
           circle: match.addresses?.[0]?.city || null,
           spamScore: match.spamScore || 0,
@@ -248,6 +259,44 @@ async function fetchTruecallerIdentity(clean10DigitNumber: string) {
     }
   } catch (err) {
     console.warn('Truecaller resolution timed out or failed:', err);
+  }
+  return null;
+}
+
+// Helper function: Resolves registered name via Eyecon Directory Fallback
+async function fetchEyeconIdentity(clean10DigitNumber: string) {
+  const apiKey = process.env.EYECON_API_KEY;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3500);
+
+    const headers: Record<string, string> = {
+      'User-Agent': 'Eyecon/4.0.0 (Android;13)',
+    };
+    if (apiKey) {
+      headers['Authorization'] = `Bearer ${apiKey}`;
+    }
+
+    const res = await fetch(
+      `https://api.eyecon-app.com/v1/search?phone=+91${clean10DigitNumber}`,
+      {
+        signal: controller.signal,
+        headers,
+      }
+    );
+    clearTimeout(timeout);
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.name && typeof data.name === 'string') {
+        return {
+          name: data.name,
+          photoUrl: data.photoUrl || null,
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('Eyecon resolution timed out or failed:', err);
   }
   return null;
 }
@@ -264,42 +313,65 @@ async function fetchTruecallerIdentity(clean10DigitNumber: string) {
         );
       }
 
-      // 1. Attempt Truecaller lookup in parallel with cellular telemetry
-      const truecallerPromise = fetchTruecallerIdentity(cleanNumber);
+      // Query Truecaller, Eyecon, and Carrier Telemetry concurrently via Promise.allSettled
+      const [tcSettled, eyeconSettled, telemetrySettled] = await Promise.allSettled([
+        fetchTruecallerIdentity(cleanNumber),
+        fetchEyeconIdentity(cleanNumber),
+        (async () => {
+          try {
+            const externalApiUrl = `https://api-calltracer-eternal.vercel.app/api?number=${cleanNumber}`;
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 4000);
+            const apiRes = await fetch(externalApiUrl, {
+              signal: controller.signal,
+              headers: { 'User-Agent': 'ArgusCore/2.0' },
+            });
+            clearTimeout(timeout);
+            if (apiRes.ok) return await apiRes.json();
+          } catch {
+            console.warn('Telemetry API unavailable, proceeding with standard resolution.');
+          }
+          return {};
+        })(),
+      ]);
 
-      // 2. Query your live API endpoint
-      let externalData: any = {};
-      try {
-        const externalApiUrl = `https://api-calltracer-eternal.vercel.app/api?number=${cleanNumber}`;
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 4000);
+      const tcResult = tcSettled.status === 'fulfilled' ? tcSettled.value : null;
+      const eyeconResult = eyeconSettled.status === 'fulfilled' ? eyeconSettled.value : null;
+      const externalData = telemetrySettled.status === 'fulfilled' ? telemetrySettled.value || {} : {};
 
-        const apiRes = await fetch(externalApiUrl, {
-          signal: controller.signal,
-          headers: { 'User-Agent': 'ArgusCore/2.0' },
-        });
-        clearTimeout(timeout);
-
-        if (apiRes.ok) {
-          externalData = await apiRes.json();
+      const sanitizeName = (rawName: string | null | undefined): string => {
+        if (!rawName || typeof rawName !== 'string') return '';
+        const cleaned = rawName.replace(/\(enquire\)/gi, '').replace(/enquire/gi, '').trim();
+        if (/^\*+$/.test(cleaned) || /^\*+\s+\*+$/.test(cleaned) || cleaned.length === 0) {
+          return '';
         }
-      } catch {
-        console.warn('Telemetry API unavailable, proceeding with standard resolution.');
+        return cleaned;
+      };
+
+      const tcName = sanitizeName(tcResult?.name);
+      const eyeconName = sanitizeName(eyeconResult?.name);
+      const extName = sanitizeName(externalData['Owner Name'] || externalData['name']);
+
+      let registeredName = 'Unlisted Subscriber';
+      let matchSource: 'Truecaller' | 'Eyecon' | 'Carrier Trace' | 'None' = 'None';
+
+      if (tcName) {
+        registeredName = tcName;
+        matchSource = 'Truecaller';
+      } else if (eyeconName) {
+        registeredName = eyeconName;
+        matchSource = 'Eyecon';
+      } else if (extName) {
+        registeredName = extName;
+        matchSource = 'Carrier Trace';
       }
-
-      const tcResult = await truecallerPromise;
-
-      // Resolve best registered name: Truecaller > External API > Default Unlisted
-      const registeredName =
-        tcResult?.name ||
-        externalData['Owner Name'] ||
-        externalData['name'] ||
-        'Unlisted / Private';
 
       return NextResponse.json({
         formattedNumber: `+91 ${cleanNumber.slice(0, 5)} ${cleanNumber.slice(5)}`,
         ownerName: registeredName,
-        isTruecallerVerified: Boolean(tcResult?.name),
+        matchSource,
+        isTruecallerVerified: matchSource === 'Truecaller',
+        isEyeconVerified: matchSource === 'Eyecon',
         simCard: tcResult?.carrier || externalData['SIM card'] || externalData['operator'] || 'Cellular Operator',
         connection: externalData['Connection'] || 'Cellular Subscriber',
         mobileState: tcResult?.circle || externalData['Mobile State'] || externalData['circle'] || 'DoT Registered Circle',

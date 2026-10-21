@@ -62,7 +62,7 @@ export default function LandingPage() {
           {/* Top Status Pill */}
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-light dark:bg-brand/20 border border-brand-border dark:border-brand/40 text-brand dark:text-blue-400 text-xs font-semibold mb-6 shadow-2xs">
             <Shield className="w-3.5 h-3.5" />
-            <span>ArgusCore MXToolbox Diagnostic Suite Active</span>
+            <span>ArgusCore Enterprise Diagnostic Suite Active</span>
             <ArrowRight className="w-3 h-3 ml-1" />
           </div>
 
@@ -70,7 +70,7 @@ export default function LandingPage() {
             Network Diagnostics & Threat Intelligence Suite
           </h1>
           <p className="mt-5 text-base sm:text-lg text-argus-600 dark:text-slate-300 max-w-2xl mx-auto font-normal leading-relaxed">
-            Execute MX lookups, DNSBL blacklist audits, DMARC record analyses, and email header forensics with high-speed async resolution.
+            Execute DNS reconnaissance, MX lookups, DNSBL blacklist audits, DMARC record analyses, and email header forensics with high-speed async resolution.
           </p>
 
           {/* Unified Hero Search Bar */}
@@ -79,6 +79,7 @@ export default function LandingPage() {
             {/* Tool Selector Tabs */}
             <div className="flex items-center justify-center gap-1 mb-2.5 pb-2 border-b border-argus-100 dark:border-slate-800 overflow-x-auto">
               {[
+                { id: 'dns', label: 'DNS & Subdomains' },
                 { id: 'supertool', label: 'SuperTool' },
                 { id: 'blacklist', label: 'Blacklist Check' },
                 { id: 'mx-lookup', label: 'MX Lookup' },
@@ -150,7 +151,7 @@ export default function LandingPage() {
       <section className="py-20 bg-white dark:bg-[#090d16]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-2">MXToolbox Diagnostic Suite</h2>
+            <h2 className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-2">Enterprise Diagnostic Suite</h2>
             <h3 className="text-3xl font-extrabold text-argus-900 dark:text-white tracking-tight">Core Infrastructure Diagnostics</h3>
           </div>
 

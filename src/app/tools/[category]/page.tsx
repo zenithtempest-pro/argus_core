@@ -6,6 +6,7 @@ import { Globe, UserCheck, FileText, Cpu, Search, Loader2, ExternalLink, CheckCi
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/components/ui/Toast';
 import { DiagnosticResultView, MainRecordItem, AssessmentTestItem, RelatedPill } from '@/components/tools/DiagnosticResultView';
+import { AuthBlurGate } from '@/components/auth/AuthBlurGate';
 
 export default function CategoryToolPage() {
   const params = useParams();
@@ -372,44 +373,46 @@ export default function CategoryToolPage() {
               </Badge>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 p-6">
-              {resultData.platforms.map((p: any, idx: number) => (
-                <div
-                  key={idx}
-                  className={`p-3.5 rounded-xl border transition-all flex items-center justify-between ${
-                    p.status === 'FOUND'
-                      ? 'bg-emerald-50/50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-argus-900 dark:text-white'
-                      : 'bg-argus-50/50 dark:bg-slate-900/50 border-argus-200 dark:border-slate-800 text-argus-400 dark:text-slate-500'
-                  }`}
-                >
-                  <div>
-                    <div className="text-xs font-bold text-argus-900 dark:text-white flex items-center gap-1.5">
-                      {p.status === 'FOUND' ? (
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                      ) : (
-                        <XCircle className="w-3.5 h-3.5 text-argus-400 shrink-0" />
-                      )}
-                      <span className="truncate max-w-[100px]">{p.name}</span>
+            <AuthBlurGate redirectPath="/tools/identity">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 p-6">
+                {resultData.platforms.map((p: any, idx: number) => (
+                  <div
+                    key={idx}
+                    className={`p-3.5 rounded-xl border transition-all flex items-center justify-between ${
+                      p.status === 'FOUND'
+                        ? 'bg-emerald-50/50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-argus-900 dark:text-white'
+                        : 'bg-argus-50/50 dark:bg-slate-900/50 border-argus-200 dark:border-slate-800 text-argus-400 dark:text-slate-500'
+                    }`}
+                  >
+                    <div>
+                      <div className="text-xs font-bold text-argus-900 dark:text-white flex items-center gap-1.5">
+                        {p.status === 'FOUND' ? (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        ) : (
+                          <XCircle className="w-3.5 h-3.5 text-argus-400 shrink-0" />
+                        )}
+                        <span className="truncate max-w-[100px]">{p.name}</span>
+                      </div>
+                      <span className="text-[10px] text-argus-500 dark:text-slate-400 font-mono mt-0.5 block">{p.category}</span>
                     </div>
-                    <span className="text-[10px] text-argus-500 dark:text-slate-400 font-mono mt-0.5 block">{p.category}</span>
-                  </div>
 
-                  {p.status === 'FOUND' ? (
-                    <a
-                      href={p.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-2 py-0.5 bg-white dark:bg-slate-800 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 rounded-md text-[11px] font-semibold hover:bg-emerald-600 hover:text-white transition-colors flex items-center gap-1 shrink-0"
-                    >
-                      <span>Visit</span>
-                      <ExternalLink className="w-2.5 h-2.5" />
-                    </a>
-                  ) : (
-                    <span className="text-[10px] text-argus-400 font-medium shrink-0">Available</span>
-                  )}
-                </div>
-              ))}
-            </div>
+                    {p.status === 'FOUND' ? (
+                      <a
+                        href={p.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-2 py-0.5 bg-white dark:bg-slate-800 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 rounded-md text-[11px] font-semibold hover:bg-emerald-600 hover:text-white transition-colors flex items-center gap-1 shrink-0"
+                      >
+                        <span>Visit</span>
+                        <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
+                    ) : (
+                      <span className="text-[10px] text-argus-400 font-medium shrink-0">Available</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </AuthBlurGate>
           </div>
         )}
 
@@ -425,42 +428,44 @@ export default function CategoryToolPage() {
               </Badge>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="bg-argus-50 dark:bg-slate-900 text-argus-500 dark:text-slate-400 font-bold border-b border-argus-200 dark:border-slate-800">
-                    <th className="py-3 px-4">Port Number</th>
-                    <th className="py-3 px-4">Service Name</th>
-                    <th className="py-3 px-4">Port State</th>
-                    <th className="py-3 px-4">Service Banner</th>
-                    <th className="py-3 px-4">Risk Level</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-argus-200 dark:divide-slate-800">
-                  {resultData.ports.map((p: any, idx: number) => (
-                    <tr key={idx} className="hover:bg-argus-50/50 dark:hover:bg-slate-900/50">
-                      <td className="py-3 px-4 font-mono font-bold text-argus-900 dark:text-white">{p.port}</td>
-                      <td className="py-3 px-4 font-semibold text-argus-800 dark:text-slate-200">{p.service}</td>
-                      <td className="py-3 px-4">
-                        {p.state === 'OPEN' && <Badge variant="success">OPEN</Badge>}
-                        {p.state === 'FILTERED' && <Badge variant="warning">FILTERED</Badge>}
-                        {p.state === 'CLOSED' && <Badge variant="neutral">CLOSED</Badge>}
-                      </td>
-                      <td className="py-3 px-4 font-mono text-argus-600 dark:text-slate-300">{p.banner}</td>
-                      <td className="py-3 px-4">
-                        <span className={`font-semibold ${p.risk === 'Safe' ? 'text-emerald-600' : p.risk === 'Medium' ? 'text-amber-600' : 'text-argus-600'}`}>
-                          {p.risk}
-                        </span>
-                      </td>
+            <AuthBlurGate redirectPath="/tools/scanners">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-argus-50 dark:bg-slate-900 text-argus-500 dark:text-slate-400 font-bold border-b border-argus-200 dark:border-slate-800">
+                      <th className="py-3 px-4">Port Number</th>
+                      <th className="py-3 px-4">Service Name</th>
+                      <th className="py-3 px-4">Port State</th>
+                      <th className="py-3 px-4">Service Banner</th>
+                      <th className="py-3 px-4">Risk Level</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-argus-200 dark:divide-slate-800">
+                    {resultData.ports.map((p: any, idx: number) => (
+                      <tr key={idx} className="hover:bg-argus-50/50 dark:hover:bg-slate-900/50">
+                        <td className="py-3 px-4 font-mono font-bold text-argus-900 dark:text-white">{p.port}</td>
+                        <td className="py-3 px-4 font-semibold text-argus-800 dark:text-slate-200">{p.service}</td>
+                        <td className="py-3 px-4">
+                          {p.state === 'OPEN' && <Badge variant="success">OPEN</Badge>}
+                          {p.state === 'FILTERED' && <Badge variant="warning">FILTERED</Badge>}
+                          {p.state === 'CLOSED' && <Badge variant="neutral">CLOSED</Badge>}
+                        </td>
+                        <td className="py-3 px-4 font-mono text-argus-600 dark:text-slate-300">{p.banner}</td>
+                        <td className="py-3 px-4">
+                          <span className={`font-semibold ${p.risk === 'Safe' ? 'text-emerald-600' : p.risk === 'Medium' ? 'text-amber-600' : 'text-argus-600'}`}>
+                            {p.risk}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </AuthBlurGate>
           </div>
         )}
 
-        {/* Structured MXToolbox Diagnostic View for Network Probes */}
+        {/* Structured Universal Diagnostic View for Network Probes */}
         {resultData && !loading && category === 'network' && (
           <DiagnosticResultView
             target={resultData.target || 'Query Target'}

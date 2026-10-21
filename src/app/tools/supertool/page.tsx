@@ -24,28 +24,29 @@ import { DiagnosticResultView, MainRecordItem, AssessmentTestItem, RelatedPill }
 
 export default function SuperToolPage() {
   const { showToast } = useToast();
-  const [prefix, setPrefix] = useState('mx');
+  const [prefix, setPrefix] = useState('dns');
   const [queryInput, setQueryInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [resultData, setResultData] = useState<any>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // A-Z Diagnostic Tools List (Including DNSDumpster Lookup)
+  // Diagnostic Tools List with DNS & Subdomain Recon FIRST (#1)
   const azToolsList = [
+    { label: 'DNS & Subdomain Recon', prefix: 'dns' },
+    { label: 'MX Lookup', prefix: 'mx' },
+    { label: 'Blacklist Check', prefix: 'blacklist' },
+    { label: 'DMARC Lookup', prefix: 'dmarc' },
+    { label: 'SPF Record Lookup', prefix: 'spf' },
     { label: 'AAAA Lookup', prefix: 'aaaa' },
     { label: 'ARIN Lookup', prefix: 'arin' },
     { label: 'ASN Lookup', prefix: 'asn' },
     { label: 'BIMI Lookup', prefix: 'bimi' },
-    { label: 'Blacklist Check', prefix: 'blacklist' },
     { label: 'Blocklist Check', prefix: 'blocklist' },
     { label: 'CERT Lookup', prefix: 'cert' },
     { label: 'CNAME Lookup', prefix: 'cname' },
     { label: 'DKIM Lookup', prefix: 'dkim' },
-    { label: 'DMARC Lookup', prefix: 'dmarc' },
     { label: 'DNS Check', prefix: 'dnscheck' },
-    { label: 'DNS Lookup', prefix: 'dns' },
-    { label: 'DNSDumpster Recon', prefix: 'dnsdumpster' },
     { label: 'DNSKEY Lookup', prefix: 'dnskey' },
     { label: 'Domain Health', prefix: 'domain-health' },
     { label: 'DS Lookup', prefix: 'ds' },
@@ -56,7 +57,6 @@ export default function SuperToolPage() {
     { label: 'LLMs.txt Lookup', prefix: 'llmstxt' },
     { label: 'LOC Lookup', prefix: 'loc' },
     { label: 'MTA-STS Lookup', prefix: 'mta-sts' },
-    { label: 'MX Lookup', prefix: 'mx' },
     { label: 'NSEC Lookup', prefix: 'nsec' },
     { label: 'NSEC3PARAM Lookup', prefix: 'nsec3param' },
     { label: 'Ping', prefix: 'ping' },
@@ -64,7 +64,6 @@ export default function SuperToolPage() {
     { label: 'Robots.txt LLM Policy', prefix: 'robots' },
     { label: 'RRSIG Lookup', prefix: 'rrsig' },
     { label: 'SOA Lookup', prefix: 'soa' },
-    { label: 'SPF Record Lookup', prefix: 'spf' },
     { label: 'SRV Lookup', prefix: 'srv' },
     { label: 'TCP Lookup', prefix: 'tcp' },
     { label: 'Test Email Server (SMTP)', prefix: 'smtp' },
@@ -91,11 +90,6 @@ export default function SuperToolPage() {
     const activePrefix = overridePrefix || prefix;
     const activeTarget = overrideTarget !== undefined ? overrideTarget : queryInput;
 
-    if (activePrefix === 'dnsdumpster' && activeTarget.trim()) {
-      window.location.href = `/tools/dnsdumpster?domain=${encodeURIComponent(activeTarget.trim())}`;
-      return;
-    }
-
     if (!activeTarget.trim() && activePrefix !== 'myip') {
       showToast('Input Required', 'Please enter a target domain or IP', 'error');
       return;
@@ -117,7 +111,7 @@ export default function SuperToolPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           target: `${activePrefix}:${cleanedTarget}`,
-          tool: 'supertool',
+          tool: activePrefix === 'dns' ? 'dns' : 'supertool',
           commandPrefix: activePrefix,
         }),
       });
@@ -133,15 +127,6 @@ export default function SuperToolPage() {
   };
 
   const handleSelectToolFromGrid = (toolPrefix: string) => {
-    if (toolPrefix === 'dnsdumpster') {
-      if (queryInput.trim()) {
-        window.location.href = `/tools/dnsdumpster?domain=${encodeURIComponent(queryInput.trim())}`;
-      } else {
-        window.location.href = '/tools/dnsdumpster';
-      }
-      return;
-    }
-
     setPrefix(toolPrefix);
     if (queryInput.trim() || toolPrefix === 'myip') {
       handleSuperToolExecute(toolPrefix, queryInput);
@@ -154,15 +139,15 @@ export default function SuperToolPage() {
   const currentToolLabel = azToolsList.find(t => t.prefix === prefix)?.label || `${prefix.toUpperCase()} Lookup`;
 
   // Build records & assessments for DiagnosticResultView
-  const records: MainRecordItem[] = resultData?.records ? resultData.records : [
+  const records: MainRecordItem[] = resultData?.dnsRecords ? resultData.dnsRecords : (resultData?.records ? resultData.records : [
     {
       type: (resultData?.commandPrefix || prefix).toUpperCase(),
-      prefix: resultData?.target || 'target',
-      value: resultData?.results?.primaryRecord || `10 mail.${resultData?.target || 'example.com'} (104.21.48.92)`,
+      prefix: resultData?.target || resultData?.targetDomain || 'target',
+      value: resultData?.results?.primaryRecord || `104.21.50.217 (${resultData?.target || resultData?.targetDomain || 'example.com'})`,
       ttl: 300,
       status: 'OK',
     }
-  ];
+  ]);
 
   const assessments: AssessmentTestItem[] = [
     { status: 'pass', test: 'SuperTool Command Syntax', assessment: `Valid execution prefix '${prefix}:'` },
@@ -172,7 +157,7 @@ export default function SuperToolPage() {
   ];
 
   const relatedPills: RelatedPill[] = [
-    { label: 'DNSDumpster', status: 'pass', action: () => window.location.href = `/tools/dnsdumpster?domain=${queryInput || 'nyxscans.com'}` },
+    { label: 'DNS & Subdomains', status: 'pass', action: () => window.location.href = `/tools/dns?q=${queryInput || 'cloudflare.com'}` },
     { label: 'MX Lookup', status: 'pass', action: () => handleSelectToolFromGrid('mx') },
     { label: 'DMARC', status: 'pass', action: () => handleSelectToolFromGrid('dmarc') },
     { label: 'SPF', status: 'pass', action: () => handleSelectToolFromGrid('spf') },
@@ -192,7 +177,7 @@ export default function SuperToolPage() {
             <div>
               <h1 className="text-2xl font-extrabold text-argus-900 dark:text-white">SuperTool Command Center</h1>
               <p className="text-xs text-argus-600 dark:text-slate-400 mt-1">
-                Universal MXToolbox-style command runner supporting 40+ multi-prefix network diagnostic tools (`mx:`, `blacklist:`, `dmarc:`, `dnsdumpster:`, `whois:`)
+                Universal Enterprise command runner supporting 40+ multi-prefix network diagnostic tools (`dns:`, `mx:`, `blacklist:`, `dmarc:`, `whois:`)
               </p>
             </div>
           </div>
@@ -212,7 +197,7 @@ export default function SuperToolPage() {
                 type="text"
                 value={queryInput}
                 onChange={(e) => setQueryInput(e.target.value)}
-                placeholder="Enter domain or IP (e.g. nyxscans.com or 8.8.8.8)..."
+                placeholder="Enter domain or IP (e.g. cloudflare.com or 8.8.8.8)..."
                 className="w-full pl-10 pr-4 py-3 text-xs font-mono font-medium bg-argus-50 dark:bg-slate-900 border border-argus-200 dark:border-slate-700 rounded-xl text-argus-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none placeholder:text-argus-400"
               />
             </div>
@@ -281,10 +266,10 @@ export default function SuperToolPage() {
             <span className="font-semibold text-argus-700 dark:text-slate-300">Quick Presets:</span>
             <button
               type="button"
-              onClick={() => { window.location.href = '/tools/dnsdumpster?domain=nyxscans.com'; }}
+              onClick={() => handleSuperToolExecute('dns', 'cloudflare.com')}
               className="hover:text-amber-600 underline font-mono text-[11px] flex items-center gap-1 text-amber-600 font-bold"
             >
-              <Network className="w-3 h-3" /> dnsdumpster:nyxscans.com
+              <Network className="w-3 h-3" /> dns:cloudflare.com
             </button>
             <span>•</span>
             <button
@@ -316,7 +301,7 @@ export default function SuperToolPage() {
         {/* Structured Diagnostic Results View */}
         {resultData && (
           <DiagnosticResultView
-            target={resultData.target}
+            target={resultData.target || resultData.targetDomain}
             queryType={`SuperTool (${(resultData.commandPrefix || prefix).toUpperCase()})`}
             timestamp={resultData.timestamp}
             records={records}
@@ -333,7 +318,7 @@ export default function SuperToolPage() {
             <Info className="w-4 h-4 text-brand" /> ABOUT SUPERTOOL COMMAND CENTER
           </h3>
           <p className="text-argus-600 dark:text-slate-300 leading-relaxed">
-            The <strong>ArgusCore SuperTool</strong> is a universal network diagnostic runner designed to consolidate dozens of domain and IP lookup utilities into a single command input. By selecting from the floating A-Z options grid or prefixing queries with commands such as <code className="font-mono text-amber-600">mx:</code>, <code className="font-mono text-amber-600">blacklist:</code>, or <code className="font-mono text-amber-600">dnsdumpster:</code>, threat analysts and sysadmins can rapidly assess mail delivery, blocklists, and DNS records.
+            The <strong>ArgusCore SuperTool</strong> is a universal network diagnostic runner designed to consolidate dozens of domain and IP lookup utilities into a single command input. By selecting from the floating options grid or prefixing queries with commands such as <code className="font-mono text-amber-600">dns:</code>, <code className="font-mono text-amber-600">mx:</code>, or <code className="font-mono text-amber-600">blacklist:</code>, threat analysts and sysadmins can rapidly assess mail delivery, blocklists, and DNS records.
           </p>
         </div>
 

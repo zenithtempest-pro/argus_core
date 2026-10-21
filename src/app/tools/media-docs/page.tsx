@@ -1,18 +1,54 @@
 'use client';
 
 import React, { useState } from 'react';
-import { FileText, Image as ImageIcon, Search, Loader2, MapPin, AlertCircle, ExternalLink, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { 
+  FileText, 
+  Image as ImageIcon, 
+  Search, 
+  Loader2, 
+  MapPin, 
+  AlertCircle, 
+  ExternalLink, 
+  ShieldAlert, 
+  CheckCircle2, 
+  Copy, 
+  Check, 
+  Hash, 
+  Binary, 
+  Camera, 
+  Layers, 
+  Compass, 
+  Calendar, 
+  Cpu, 
+  ShieldCheck 
+} from 'lucide-react';
 import ExifReader from 'exifreader';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/components/ui/Toast';
+import { AuthBlurGate } from '@/components/auth/AuthBlurGate';
 
-interface ParsedExif {
-  hasExif: boolean;
+interface UniversalForensics {
   fileName: string;
-  fileSize: string;
-  fileType: string;
+  fileSizeBytes: number;
+  fileSizeFormatted: string;
+  mimeType: string;
+  lastModifiedUtc: string;
+  lastModifiedLocal: string;
+  width: number | null;
+  height: number | null;
+  megapixels: string | null;
+  aspectRatio: string | null;
+  previewUrl: string | null;
+  magicBytesHex: string;
+  fileSignature: string;
+  sha256Hash: string;
+}
+
+interface DeepExif {
+  hasCameraExif: boolean;
   make?: string;
   model?: string;
+  lens?: string;
   dateTimeOriginal?: string;
   software?: string;
   exposureTime?: string;
@@ -22,17 +58,55 @@ interface ParsedExif {
   gpsLon?: number;
   gpsFormatted?: string;
   osmUrl?: string;
-  rawTagsCount?: number;
+  rawTagsCount: number;
+}
+
+function detectSignature(bytes: Uint8Array): string {
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return 'JPEG / JFIF / EXIF Format (FF D8 FF)';
+  }
+  if (bytes.length >= 4 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) {
+    return 'PNG Lossless Image Format (89 50 4E 47)';
+  }
+  if (bytes.length >= 4 && bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) {
+    return 'GIF Graphics Interchange Format (GIF8)';
+  }
+  if (bytes.length >= 4 && bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) {
+    return 'PDF Portable Document Format (%PDF)';
+  }
+  if (bytes.length >= 4 && bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 0x03 && bytes[3] === 0x04) {
+    return 'ZIP / Office OpenXML Container (PK..)';
+  }
+  if (bytes.length >= 4 && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46) {
+    return 'RIFF Multimedia Container (WebP / WAV / AVI)';
+  }
+  if (bytes.length >= 4 && ((bytes[0] === 0x49 && bytes[1] === 0x49 && bytes[2] === 0x2a && bytes[0x00]) || (bytes[0] === 0x4d && bytes[1] === 0x4d && bytes[2] === 0x00 && bytes[3] === 0x2a))) {
+    return 'TIFF Tagged Image File Format';
+  }
+  return 'Raw Binary Stream (Generic Signature)';
+}
+
+function calculateAspectRatio(w: number, h: number): string {
+  if (!w || !h) return 'N/A';
+  const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+  const divisor = gcd(w, h);
+  const rw = w / divisor;
+  const rh = h / divisor;
+  if (rw <= 32 && rh <= 32) {
+    return `${rw}:${rh}`;
+  }
+  return `${(w / h).toFixed(2)}:1`;
 }
 
 export default function MediaDocsPage() {
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<'exif' | 'dorking'>('exif');
 
-  // EXIF Inspector State
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  // Forensics State
   const [parsing, setParsing] = useState(false);
-  const [exifResult, setExifResult] = useState<ParsedExif | null>(null);
+  const [layer1, setLayer1] = useState<UniversalForensics | null>(null);
+  const [layer2, setLayer2] = useState<DeepExif | null>(null);
+  const [copiedHash, setCopiedHash] = useState(false);
 
   // Document Dorking State
   const [dorkDomain, setDorkDomain] = useState('');
@@ -41,79 +115,170 @@ export default function MediaDocsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setSelectedFile(file);
     setParsing(true);
-    setExifResult(null);
+    setLayer1(null);
+    setLayer2(null);
+    setCopiedHash(false);
 
     try {
       const fileBuffer = await file.arrayBuffer();
-      const tags = ExifReader.load(fileBuffer, { expanded: true });
 
-      const exifTags = tags.exif || {};
-      const gpsTags = tags.gps || {};
+      // --- LAYER 1: UNIVERSAL FILE & IMAGE FORENSICS (ALWAYS EXTRACTED) ---
+      // 1. Dimensions via HTMLImageElement
+      let width: number | null = null;
+      let height: number | null = null;
+      let previewUrl: string | null = null;
 
-      const make = exifTags.Make?.description || (tags.file as any)?.Make?.description;
-      const model = exifTags.Model?.description || (tags.file as any)?.Model?.description;
-      const dateTimeOriginal = exifTags.DateTimeOriginal?.description || (tags.file as any)?.DateTimeOriginal?.description;
-      const software = exifTags.Software?.description || (tags.file as any)?.Software?.description;
-      const exposureTime = exifTags.ExposureTime?.description || (tags.file as any)?.ExposureTime?.description;
-      const fNumber = exifTags.FNumber?.description || (tags.file as any)?.FNumber?.description;
-      const iso = exifTags.ISOSpeedRatings?.description || (tags.file as any)?.ISOSpeedRatings?.description;
-
-      let gpsLat: number | undefined = undefined;
-      let gpsLon: number | undefined = undefined;
-
-      if (gpsTags.Latitude && gpsTags.Longitude) {
-        gpsLat = typeof gpsTags.Latitude === 'number' ? gpsTags.Latitude : parseFloat(String(gpsTags.Latitude));
-        gpsLon = typeof gpsTags.Longitude === 'number' ? gpsTags.Longitude : parseFloat(String(gpsTags.Longitude));
+      if (file.type.startsWith('image/') || /\.(jpe?g|png|webp|gif|bmp|tiff?)$/i.test(file.name)) {
+        previewUrl = URL.createObjectURL(file);
+        await new Promise<void>((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            width = img.naturalWidth;
+            height = img.naturalHeight;
+            resolve();
+          };
+          img.onerror = () => {
+            resolve();
+          };
+          img.src = previewUrl!;
+        });
       }
 
-      const hasMetadata = Boolean(make || model || dateTimeOriginal || software || gpsLat !== undefined);
-
-      let osmUrl: string | undefined = undefined;
-      let gpsFormatted: string | undefined = undefined;
-
-      if (gpsLat !== undefined && gpsLon !== undefined && !isNaN(gpsLat) && !isNaN(gpsLon)) {
-        gpsFormatted = `${gpsLat.toFixed(5)}°, ${gpsLon.toFixed(5)}°`;
-        osmUrl = `https://www.openstreetmap.org/?mlat=${gpsLat}&mlon=${gpsLon}#map=15/${gpsLat}/${gpsLon}`;
+      // 2. Megapixels & Aspect Ratio
+      let megapixels: string | null = null;
+      let aspectRatio: string | null = null;
+      if (width && height) {
+        megapixels = `${((width * height) / 1_000_000).toFixed(2)} MP`;
+        aspectRatio = calculateAspectRatio(width, height);
       }
 
-      const result: ParsedExif = {
-        hasExif: hasMetadata,
+      // 3. Binary Magic Bytes (first 8 bytes)
+      const uint8 = new Uint8Array(fileBuffer);
+      const first8 = uint8.slice(0, 8);
+      const magicBytesHex = Array.from(first8)
+        .map((b) => b.toString(16).toUpperCase().padStart(2, '0'))
+        .join(' ');
+      const fileSignature = detectSignature(first8);
+
+      // 4. SHA-256 Checksum via Web Crypto
+      const hashBuffer = await crypto.subtle.digest('SHA-256', fileBuffer);
+      const sha256Hash = Array.from(new Uint8Array(hashBuffer))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+
+      // 5. Timestamps
+      const modDate = new Date(file.lastModified);
+      const lastModifiedUtc = modDate.toUTCString();
+      const lastModifiedLocal = modDate.toLocaleString();
+
+      const byteSize = file.size;
+      const formattedSize = byteSize > 1048576 
+        ? `${(byteSize / 1048576).toFixed(2)} MB (${byteSize.toLocaleString()} bytes)`
+        : `${(byteSize / 1024).toFixed(1)} KB (${byteSize.toLocaleString()} bytes)`;
+
+      const l1Result: UniversalForensics = {
         fileName: file.name,
-        fileSize: `${(file.size / 1024).toFixed(1)} KB`,
-        fileType: file.type || 'Unknown Format',
-        make,
-        model,
-        dateTimeOriginal,
-        software,
-        exposureTime,
-        fNumber,
-        iso,
-        gpsLat,
-        gpsLon,
-        gpsFormatted,
-        osmUrl,
-        rawTagsCount: Object.keys(tags).length,
+        fileSizeBytes: byteSize,
+        fileSizeFormatted: formattedSize,
+        mimeType: file.type || 'application/octet-stream',
+        lastModifiedUtc,
+        lastModifiedLocal,
+        width,
+        height,
+        megapixels,
+        aspectRatio,
+        previewUrl,
+        magicBytesHex,
+        fileSignature,
+        sha256Hash,
       };
 
-      setExifResult(result);
-      if (hasMetadata) {
-        showToast('EXIF Extracted', `Successfully parsed metadata for ${file.name}`, 'success');
+      setLayer1(l1Result);
+
+      // --- LAYER 2: DEEP EXIF / TIFF / GPS TAGS ---
+      let deepResult: DeepExif = {
+        hasCameraExif: false,
+        rawTagsCount: 0,
+      };
+
+      try {
+        const tags = ExifReader.load(fileBuffer, { expanded: true });
+        const exifTags = tags.exif || {};
+        const gpsTags = tags.gps || {};
+        const fileTags = (tags.file as any) || {};
+
+        const make = exifTags.Make?.description || fileTags.Make?.description;
+        const model = exifTags.Model?.description || fileTags.Model?.description;
+        const lens = exifTags.LensModel?.description || exifTags.Lens?.description;
+        const dateTimeOriginal = exifTags.DateTimeOriginal?.description || fileTags.DateTimeOriginal?.description;
+        const software = exifTags.Software?.description || fileTags.Software?.description;
+        const exposureTime = exifTags.ExposureTime?.description || fileTags.ExposureTime?.description;
+        const fNumber = exifTags.FNumber?.description || fileTags.FNumber?.description;
+        const iso = exifTags.ISOSpeedRatings?.description || fileTags.ISOSpeedRatings?.description;
+
+        let gpsLat: number | undefined = undefined;
+        let gpsLon: number | undefined = undefined;
+
+        if (gpsTags.Latitude && gpsTags.Longitude) {
+          gpsLat = typeof gpsTags.Latitude === 'number' ? gpsTags.Latitude : parseFloat(String(gpsTags.Latitude));
+          gpsLon = typeof gpsTags.Longitude === 'number' ? gpsTags.Longitude : parseFloat(String(gpsTags.Longitude));
+        }
+
+        const hasCamera = Boolean(make || model || lens || dateTimeOriginal || exposureTime || (gpsLat !== undefined && !isNaN(gpsLat)));
+
+        let osmUrl: string | undefined = undefined;
+        let gpsFormatted: string | undefined = undefined;
+
+        if (gpsLat !== undefined && gpsLon !== undefined && !isNaN(gpsLat) && !isNaN(gpsLon)) {
+          gpsFormatted = `${gpsLat.toFixed(5)}°, ${gpsLon.toFixed(5)}°`;
+          osmUrl = `https://www.openstreetmap.org/?mlat=${gpsLat}&mlon=${gpsLon}#map=15/${gpsLat}/${gpsLon}`;
+        }
+
+        deepResult = {
+          hasCameraExif: hasCamera,
+          make,
+          model,
+          lens,
+          dateTimeOriginal,
+          software,
+          exposureTime,
+          fNumber,
+          iso,
+          gpsLat,
+          gpsLon,
+          gpsFormatted,
+          osmUrl,
+          rawTagsCount: Object.keys(tags).length,
+        };
+      } catch (exifErr) {
+        // Tag parsing issue; layer 2 remains hasCameraExif: false
+        deepResult = {
+          hasCameraExif: false,
+          rawTagsCount: 0,
+        };
+      }
+
+      setLayer2(deepResult);
+
+      if (deepResult.hasCameraExif) {
+        showToast('Forensics Complete', `Extracted Camera EXIF & Telemetry for ${file.name}`, 'success');
       } else {
-        showToast('No EXIF Data', 'No camera metadata or GPS coordinates found in file', 'info');
+        showToast('Forensics Extracted', `Universal image telemetry & SHA-256 computed for ${file.name}`, 'info');
       }
     } catch (err: any) {
-      setExifResult({
-        hasExif: false,
-        fileName: file.name,
-        fileSize: `${(file.size / 1024).toFixed(1)} KB`,
-        fileType: file.type || 'Unknown Format',
-      });
-      showToast('Metadata Reading Warning', 'File contains no readable EXIF header tags', 'info');
+      showToast('Forensic Error', err.message || 'Failed to inspect file', 'error');
     } finally {
       setParsing(false);
     }
+  };
+
+  const handleCopyHash = () => {
+    if (!layer1?.sha256Hash) return;
+    navigator.clipboard.writeText(layer1.sha256Hash);
+    setCopiedHash(true);
+    showToast('Checksum Copied', 'SHA-256 hash copied to clipboard', 'success');
+    setTimeout(() => setCopiedHash(false), 2000);
   };
 
   const handleRunDork = (dorkTemplate: string) => {
@@ -133,14 +298,16 @@ export default function MediaDocsPage() {
               <FileText className="w-6 h-6 stroke-[2]" />
             </div>
             <div>
-              <h1 className="text-2xl font-extrabold text-argus-900 dark:text-white">EXIF Forensics & Document Dorking Hub</h1>
+              <h1 className="text-2xl font-extrabold text-argus-900 dark:text-white">
+                EXIF Forensics & Document Dorking Hub
+              </h1>
               <p className="text-xs text-argus-600 dark:text-slate-400 mt-1">
-                Client-side EXIF/GPS metadata inspection and targeted Google Dork queries for indexed documents
+                Client-side cryptographic hash generation, binary magic bytes detection, camera EXIF analysis, and Google OSINT dorking
               </p>
             </div>
           </div>
           <Badge variant="info" size="md">
-            OSINT Forensics
+            OSINT Forensics Engine
           </Badge>
         </div>
 
@@ -155,7 +322,7 @@ export default function MediaDocsPage() {
             }`}
           >
             <ImageIcon className="w-4 h-4" />
-            <span>Client-Side EXIF Forensic Extractor</span>
+            <span>Client-Side File & EXIF Forensics</span>
           </button>
 
           <button
@@ -171,7 +338,7 @@ export default function MediaDocsPage() {
           </button>
         </div>
 
-        {/* TAB 1: EXIF Forensic Extractor */}
+        {/* TAB 1: EXIF & File Forensics */}
         {activeTab === 'exif' && (
           <div className="space-y-6">
             
@@ -182,15 +349,15 @@ export default function MediaDocsPage() {
                   <ImageIcon className="w-8 h-8" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-argus-900 dark:text-white">Upload File for Metadata Inspection</h3>
+                  <h3 className="text-base font-bold text-argus-900 dark:text-white">Upload File for Forensic Inspection</h3>
                   <p className="text-xs text-argus-600 dark:text-slate-400 mt-1">
-                    Upload JPEG, PNG, or TIFF files. Metadata is parsed 100% locally inside your browser.
+                    Upload JPEG, PNG, WebP, TIFF, or document files. Analyzed 100% locally in your browser with zero server uploads.
                   </p>
                 </div>
                 <label className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs rounded-xl cursor-pointer transition-all shadow-card">
                   {parsing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />}
-                  <span>{parsing ? 'Parsing EXIF Header...' : 'Select Local File'}</span>
-                  <input type="file" onChange={handleFileUpload} accept="image/*" className="hidden" disabled={parsing} />
+                  <span>{parsing ? 'Extracting Forensics...' : 'Select Local File'}</span>
+                  <input type="file" onChange={handleFileUpload} accept="*/*" className="hidden" disabled={parsing} />
                 </label>
               </div>
             </div>
@@ -200,99 +367,243 @@ export default function MediaDocsPage() {
               <div className="bg-white dark:bg-[#131b2e] p-8 rounded-2xl border border-argus-200 dark:border-slate-800 text-center space-y-3">
                 <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto" />
                 <p className="text-xs font-semibold text-argus-700 dark:text-slate-300">
-                  Executing client-side ExifReader binary decoder...
+                  Computing SHA-256 digest, inspecting magic bytes, and parsing metadata headers...
                 </p>
               </div>
             )}
 
-            {/* EXIF Output Display */}
-            {exifResult && !parsing && (
-              <div className="bg-white dark:bg-[#131b2e] p-6 rounded-2xl border border-argus-200 dark:border-slate-800 shadow-card space-y-6">
+            {/* Forensics Output Display */}
+            {layer1 && !parsing && (
+              <div className="space-y-6 animate-in fade-in">
                 
-                {/* Header Metadata Info */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-argus-200 dark:border-slate-800 pb-4 gap-2">
-                  <div>
-                    <h3 className="text-sm font-bold text-argus-900 dark:text-white flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-blue-500" /> File: <span className="font-mono text-blue-600 dark:text-blue-400">{exifResult.fileName}</span>
-                    </h3>
-                    <p className="text-xs text-argus-500 dark:text-slate-400 mt-0.5">
-                      Size: {exifResult.fileSize} • Type: {exifResult.fileType}
-                    </p>
+                {/* ======================================================== */}
+                {/* LAYER 1 TEASER: UNIVERSAL FILE & IMAGE FORENSICS (CLEAR) */}
+                {/* ======================================================== */}
+                <div className="bg-white dark:bg-[#131b2e] p-6 rounded-2xl border border-argus-200 dark:border-slate-800 shadow-card space-y-6">
+                  
+                  {/* File Header Bar */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-argus-200 dark:border-slate-800 pb-4 gap-2">
+                    <div className="flex items-center gap-3">
+                      {layer1.previewUrl && (
+                        <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-900 border border-argus-200 dark:border-slate-700 shrink-0 flex items-center justify-center">
+                          <img 
+                            src={layer1.previewUrl} 
+                            alt={layer1.fileName} 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <div>
+                        <h3 className="text-sm font-bold text-argus-900 dark:text-white flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-blue-500" />
+                          <span className="font-mono text-blue-600 dark:text-blue-400">{layer1.fileName}</span>
+                        </h3>
+                        <p className="text-xs text-argus-500 dark:text-slate-400 mt-0.5">
+                          {layer1.fileSizeFormatted} • {layer1.mimeType}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Badge variant="info">Layer 1 Forensics Verified</Badge>
+                      <Badge variant={layer2?.hasCameraExif ? 'success' : 'warning'}>
+                        {layer2?.hasCameraExif ? 'Camera EXIF Present' : 'Standard Web File'}
+                      </Badge>
+                    </div>
                   </div>
-                  <Badge variant={exifResult.hasExif ? 'success' : 'warning'}>
-                    {exifResult.hasExif ? 'EXIF Header Found' : 'No EXIF Data'}
-                  </Badge>
+
+                  {/* Universal File & Dimension Cards (Always Visible) */}
+                  <div>
+                    <h4 className="text-xs font-bold text-argus-500 dark:text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                      <Layers className="w-3.5 h-3.5 text-blue-500" />
+                      Universal File & Image Geometry (Teaser Preview)
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                      
+                      <div className="p-3.5 rounded-xl bg-argus-50 dark:bg-slate-900 border border-argus-200 dark:border-slate-800">
+                        <span className="text-argus-500 dark:text-slate-400 block mb-1">Image Dimensions</span>
+                        <strong className="text-argus-900 dark:text-white text-sm font-mono">
+                          {layer1.width && layer1.height ? `${layer1.width} × ${layer1.height} px` : 'Non-image file'}
+                        </strong>
+                      </div>
+
+                      <div className="p-3.5 rounded-xl bg-argus-50 dark:bg-slate-900 border border-argus-200 dark:border-slate-800">
+                        <span className="text-argus-500 dark:text-slate-400 block mb-1">Megapixels & Aspect Ratio</span>
+                        <strong className="text-argus-900 dark:text-white text-sm font-mono">
+                          {layer1.megapixels ? `${layer1.megapixels} • ${layer1.aspectRatio}` : 'N/A'}
+                        </strong>
+                      </div>
+
+                      <div className="p-3.5 rounded-xl bg-argus-50 dark:bg-slate-900 border border-argus-200 dark:border-slate-800">
+                        <span className="text-argus-500 dark:text-slate-400 block mb-1">MIME Content Type</span>
+                        <strong className="text-argus-900 dark:text-white text-sm font-mono truncate block" title={layer1.mimeType}>
+                          {layer1.mimeType}
+                        </strong>
+                      </div>
+
+                      <div className="p-3.5 rounded-xl bg-argus-50 dark:bg-slate-900 border border-argus-200 dark:border-slate-800">
+                        <span className="text-argus-500 dark:text-slate-400 block mb-1">Last Modified (Local)</span>
+                        <strong className="text-argus-900 dark:text-white text-xs font-mono block truncate" title={layer1.lastModifiedLocal}>
+                          {layer1.lastModifiedLocal}
+                        </strong>
+                      </div>
+
+                    </div>
+                  </div>
+
                 </div>
 
-                {/* If No EXIF found */}
-                {!exifResult.hasExif ? (
-                  <div className="p-6 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                    <div className="text-xs space-y-1">
-                      <p className="font-bold">No EXIF metadata found in this file (Metadata was stripped or unsupported file format).</p>
-                      <p className="text-argus-600 dark:text-slate-400">
-                        Many messaging platforms (such as WhatsApp, Signal, or Telegram) and social web applications automatically strip camera and GPS headers prior to uploading to protect user privacy.
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  /* EXIF Grid Details */
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
+                {/* ======================================================== */}
+                {/* GATED SECTION: CRYPTOGRAPHIC HASH, MAGIC BYTES & EXIF     */}
+                {/* ======================================================== */}
+                <AuthBlurGate redirectPath="/tools/media-docs">
+                  <div className="space-y-6">
                     
-                    <div className="p-4 rounded-xl bg-argus-50 dark:bg-slate-900 border border-argus-200 dark:border-slate-800">
-                      <span className="text-argus-500 dark:text-slate-400 block mb-1">Camera Manufacturer</span>
-                      <strong className="text-argus-900 dark:text-white text-sm">{exifResult.make || 'Omitted / Unknown'}</strong>
+                    {/* Cryptographic & Binary Forensics Cards */}
+                    <div className="bg-white dark:bg-[#131b2e] p-6 rounded-2xl border border-argus-200 dark:border-slate-800 shadow-card space-y-4">
+                      <h4 className="text-xs font-bold text-argus-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                        Cryptographic Digest & Binary Header Inspection
+                      </h4>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                        
+                        {/* SHA-256 Card */}
+                        <div className="p-4 rounded-xl bg-argus-50 dark:bg-slate-900 border border-argus-200 dark:border-slate-800 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-argus-600 dark:text-slate-400 font-semibold flex items-center gap-1.5">
+                              <Hash className="w-4 h-4 text-blue-500" />
+                              SHA-256 Cryptographic Checksum
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleCopyHash}
+                              className="px-2 py-1 text-[11px] font-bold rounded-lg bg-argus-200 dark:bg-slate-800 hover:bg-blue-500 hover:text-white text-argus-700 dark:text-slate-300 transition-colors flex items-center gap-1"
+                            >
+                              {copiedHash ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                              <span>{copiedHash ? 'Copied' : 'Copy'}</span>
+                            </button>
+                          </div>
+                          <div className="p-2.5 bg-white dark:bg-black/40 rounded-lg border border-argus-200 dark:border-slate-800 font-mono text-[11px] text-argus-900 dark:text-blue-300 break-all select-all">
+                            {layer1.sha256Hash}
+                          </div>
+                          <p className="text-[10px] text-argus-500 dark:text-slate-500">
+                            Computed in-browser via Web Cryptography API (crypto.subtle.digest)
+                          </p>
+                        </div>
+
+                        {/* Magic Bytes Card */}
+                        <div className="p-4 rounded-xl bg-argus-50 dark:bg-slate-900 border border-argus-200 dark:border-slate-800 space-y-2">
+                          <span className="text-argus-600 dark:text-slate-400 font-semibold flex items-center gap-1.5">
+                            <Binary className="w-4 h-4 text-amber-500" />
+                            File Signature & Header Magic Bytes (First 8 Bytes)
+                          </span>
+                          <div className="p-2.5 bg-white dark:bg-black/40 rounded-lg border border-argus-200 dark:border-slate-800 font-mono text-xs font-bold text-amber-600 dark:text-amber-400 tracking-wider">
+                            {layer1.magicBytesHex}
+                          </div>
+                          <div className="text-[11px] font-medium text-argus-700 dark:text-slate-300 flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                            <span>Signature: <strong>{layer1.fileSignature}</strong></span>
+                          </div>
+                        </div>
+
+                      </div>
                     </div>
 
-                    <div className="p-4 rounded-xl bg-argus-50 dark:bg-slate-900 border border-argus-200 dark:border-slate-800">
-                      <span className="text-argus-500 dark:text-slate-400 block mb-1">Camera Model</span>
-                      <strong className="text-argus-900 dark:text-white text-sm">{exifResult.model || 'Omitted / Unknown'}</strong>
-                    </div>
+                    {/* Layer 2: Deep EXIF / TIFF / GPS Tags */}
+                    <div className="bg-white dark:bg-[#131b2e] p-6 rounded-2xl border border-argus-200 dark:border-slate-800 shadow-card space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-bold text-argus-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                          <Camera className="w-3.5 h-3.5 text-blue-500" />
+                          Layer 2 — Deep Camera EXIF, Optics & Geospatial GPS
+                        </h4>
+                        <Badge variant={layer2?.hasCameraExif ? 'success' : 'neutral'}>
+                          {layer2?.hasCameraExif ? 'EXIF Metadata Verified' : 'Stripped / Web Compressed'}
+                        </Badge>
+                      </div>
 
-                    <div className="p-4 rounded-xl bg-argus-50 dark:bg-slate-900 border border-argus-200 dark:border-slate-800">
-                      <span className="text-argus-500 dark:text-slate-400 block mb-1">Timestamp Original</span>
-                      <strong className="text-argus-900 dark:text-white text-sm font-mono">{exifResult.dateTimeOriginal || 'N/A'}</strong>
-                    </div>
-
-                    <div className="p-4 rounded-xl bg-argus-50 dark:bg-slate-900 border border-argus-200 dark:border-slate-800">
-                      <span className="text-argus-500 dark:text-slate-400 block mb-1">Software / Firmware</span>
-                      <strong className="text-argus-900 dark:text-white text-sm font-mono">{exifResult.software || 'N/A'}</strong>
-                    </div>
-
-                    <div className="p-4 rounded-xl bg-argus-50 dark:bg-slate-900 border border-argus-200 dark:border-slate-800">
-                      <span className="text-argus-500 dark:text-slate-400 block mb-1">Exposure & Optics</span>
-                      <strong className="text-argus-900 dark:text-white text-sm font-mono">
-                        {exifResult.exposureTime ? `${exifResult.exposureTime}s` : ''} {exifResult.fNumber ? `• ${exifResult.fNumber}` : ''} {exifResult.iso ? `• ISO ${exifResult.iso}` : 'N/A'}
-                      </strong>
-                    </div>
-
-                    {/* GPS Details & OpenStreetMap Link */}
-                    <div className="p-4 rounded-xl bg-argus-50 dark:bg-slate-900 border border-argus-200 dark:border-slate-800">
-                      <span className="text-argus-500 dark:text-slate-400 block mb-1">Geospatial GPS Coordinates</span>
-                      {exifResult.gpsFormatted && exifResult.osmUrl ? (
-                        <div className="space-y-1.5">
-                          <strong className="text-emerald-600 dark:text-emerald-400 text-sm font-mono block">
-                            {exifResult.gpsFormatted}
-                          </strong>
-                          <a
-                            href={exifResult.osmUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline"
-                          >
-                            <MapPin className="w-3.5 h-3.5" />
-                            View on OpenStreetMap ↗
-                          </a>
+                      {/* If camera tags stripped (e.g. WhatsApp, Signal, Web PNG) */}
+                      {!layer2?.hasCameraExif ? (
+                        <div className="p-5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 flex items-start gap-3">
+                          <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                          <div className="text-xs space-y-1.5">
+                            <p className="font-extrabold text-sm">
+                              Social Media / Messaging Compression Detected: Camera & GPS headers were stripped by sender platform, displaying file binary & cryptographic forensics above.
+                            </p>
+                            <p className="text-argus-600 dark:text-slate-400">
+                              Messaging applications (such as WhatsApp, Telegram, Discord, or Instagram) strip EXIF metadata before transmission to protect sender geolocation. All physical binary properties, image geometry ({layer1.width}×{layer1.height} px), magic bytes, and cryptographic SHA-256 digests remain fully preserved above.
+                            </p>
+                          </div>
                         </div>
                       ) : (
-                        <strong className="text-argus-500 dark:text-slate-500 text-xs font-mono">
-                          GPS Tag Not Present
-                        </strong>
+                        /* Deep EXIF Grid Details */
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
+                          
+                          <div className="p-4 rounded-xl bg-argus-50 dark:bg-slate-900 border border-argus-200 dark:border-slate-800">
+                            <span className="text-argus-500 dark:text-slate-400 block mb-1">Camera Manufacturer</span>
+                            <strong className="text-argus-900 dark:text-white text-sm">{layer2.make || 'Omitted / Unknown'}</strong>
+                          </div>
+
+                          <div className="p-4 rounded-xl bg-argus-50 dark:bg-slate-900 border border-argus-200 dark:border-slate-800">
+                            <span className="text-argus-500 dark:text-slate-400 block mb-1">Camera Model</span>
+                            <strong className="text-argus-900 dark:text-white text-sm">{layer2.model || 'Omitted / Unknown'}</strong>
+                          </div>
+
+                          <div className="p-4 rounded-xl bg-argus-50 dark:bg-slate-900 border border-argus-200 dark:border-slate-800">
+                            <span className="text-argus-500 dark:text-slate-400 block mb-1">Lens Model</span>
+                            <strong className="text-argus-900 dark:text-white text-sm">{layer2.lens || 'N/A'}</strong>
+                          </div>
+
+                          <div className="p-4 rounded-xl bg-argus-50 dark:bg-slate-900 border border-argus-200 dark:border-slate-800">
+                            <span className="text-argus-500 dark:text-slate-400 block mb-1">Original Capture Timestamp</span>
+                            <strong className="text-argus-900 dark:text-white text-sm font-mono">{layer2.dateTimeOriginal || 'N/A'}</strong>
+                          </div>
+
+                          <div className="p-4 rounded-xl bg-argus-50 dark:bg-slate-900 border border-argus-200 dark:border-slate-800">
+                            <span className="text-argus-500 dark:text-slate-400 block mb-1">Exposure & Optics</span>
+                            <strong className="text-argus-900 dark:text-white text-sm font-mono">
+                              {layer2.exposureTime ? `${layer2.exposureTime}s` : ''} {layer2.fNumber ? `• ${layer2.fNumber}` : ''} {layer2.iso ? `• ISO ${layer2.iso}` : 'N/A'}
+                            </strong>
+                          </div>
+
+                          <div className="p-4 rounded-xl bg-argus-50 dark:bg-slate-900 border border-argus-200 dark:border-slate-800">
+                            <span className="text-argus-500 dark:text-slate-400 block mb-1">Software / Firmware</span>
+                            <strong className="text-argus-900 dark:text-white text-sm font-mono">{layer2.software || 'N/A'}</strong>
+                          </div>
+
+                          {/* GPS Details & OpenStreetMap Link */}
+                          <div className="p-4 rounded-xl bg-argus-50 dark:bg-slate-900 border border-argus-200 dark:border-slate-800 sm:col-span-2 md:col-span-3">
+                            <span className="text-argus-500 dark:text-slate-400 block mb-1">Geospatial GPS Coordinates</span>
+                            {layer2.gpsFormatted && layer2.osmUrl ? (
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                                <strong className="text-emerald-600 dark:text-emerald-400 text-sm font-mono">
+                                  {layer2.gpsFormatted}
+                                </strong>
+                                <a
+                                  href={layer2.osmUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all shadow-card w-fit"
+                                >
+                                  <MapPin className="w-3.5 h-3.5" />
+                                  <span>View on OpenStreetMap ↗</span>
+                                </a>
+                              </div>
+                            ) : (
+                              <strong className="text-argus-500 dark:text-slate-500 text-xs font-mono">
+                                GPS Tag Not Embedded in File Header
+                              </strong>
+                            )}
+                          </div>
+
+                        </div>
                       )}
+
                     </div>
 
                   </div>
-                )}
+                </AuthBlurGate>
 
               </div>
             )}

@@ -5,3 +5,4 @@ build/
 .next/
 *.pptx
 .env*.local
+*.tsbuildinfo

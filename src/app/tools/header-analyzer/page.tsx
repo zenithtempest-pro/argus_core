@@ -5,6 +5,8 @@ import { ShieldCheck, FileCode, Loader2, Info, CheckCircle2, AlertTriangle, XCir
 import { JsonViewer } from '@/components/ui/JsonViewer';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/components/ui/Toast';
+import { useAuth } from '@/context/AuthContext';
+import { AuthBlurGate } from '@/components/auth/AuthBlurGate';
 
 interface ParsedHop {
   hopNumber: number;
@@ -74,6 +76,7 @@ Date: Tue, 18 Aug 2026 12:00:00 -0700
 Message-ID: <spoof-99210-alert@paypal.com>`;
 
 export default function HeaderAnalyzerPage() {
+  const { isLoggedIn } = useAuth();
   const { showToast } = useToast();
   const [rawHeader, setRawHeader] = useState('');
   const [loading, setLoading] = useState(false);
@@ -449,63 +452,68 @@ export default function HeaderAnalyzerPage() {
               </div>
             </div>
 
-            {/* Hop Transit Timeline */}
-            <div className="bg-white dark:bg-[#131b2e] p-6 rounded-2xl border border-argus-200 dark:border-slate-800 shadow-card space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-argus-900 dark:text-white flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-blue-500" /> Hop Transit Timeline ({analysis.totalHops} Total Relays)
-                </h3>
-              </div>
-
-              <div className="overflow-x-auto rounded-xl border border-argus-200 dark:border-slate-800">
-                <table className="w-full text-left text-xs border-collapse font-mono">
-                  <thead>
-                    <tr className="bg-argus-100 dark:bg-slate-900 text-argus-700 dark:text-slate-300 font-bold border-b border-argus-200 dark:border-slate-800 font-sans">
-                      <th className="p-3.5">Hop #</th>
-                      <th className="p-3.5">Sending Host (From)</th>
-                      <th className="p-3.5">Receiving Host (By)</th>
-                      <th className="p-3.5">Protocol</th>
-                      <th className="p-3.5 text-right">Delay</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-argus-200 dark:divide-slate-800 text-argus-800 dark:text-slate-200">
-                    {analysis.hops.map((hop) => (
-                      <tr key={hop.hopNumber} className="hover:bg-argus-50 dark:hover:bg-slate-800/40">
-                        <td className="p-3.5 font-bold text-blue-600 dark:text-blue-400">Hop {hop.hopNumber}</td>
-                        <td className="p-3.5">{hop.fromHost}</td>
-                        <td className="p-3.5">{hop.byHost}</td>
-                        <td className="p-3.5 text-argus-500 dark:text-slate-400">{hop.protocol}</td>
-                        <td className={`p-3.5 text-right font-bold ${hop.delaySec > 300 ? 'text-rose-500' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                          {hop.delaySec}s
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Synced Explanatory Card: Dynamic Findings */}
-            <div className="bg-white dark:bg-[#131b2e] p-6 rounded-2xl border border-argus-200 dark:border-slate-800 shadow-card space-y-3">
-              <h3 className="text-sm font-bold text-argus-900 dark:text-white flex items-center gap-2">
-                <Info className="w-4 h-4 text-blue-500" /> Automated Forensics & Threat Findings
-              </h3>
-
-              <div className="space-y-2">
-                {analysis.findings.map((finding, idx) => (
-                  <div key={idx} className="p-3 rounded-xl bg-argus-50 dark:bg-slate-900 border border-argus-200 dark:border-slate-800 flex items-start gap-2.5 text-xs text-argus-800 dark:text-slate-200">
-                    {analysis.riskLevel === 'LOW' ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                    ) : (
-                      <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
-                    )}
-                    <span>{finding}</span>
+            {/* Deep Hop Transit & Findings Section with AuthBlurGate */}
+            <AuthBlurGate redirectPath="/tools/header-analyzer">
+              <div className="space-y-6">
+                {/* Hop Transit Timeline */}
+                <div className="bg-white dark:bg-[#131b2e] p-6 rounded-2xl border border-argus-200 dark:border-slate-800 shadow-card space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-argus-900 dark:text-white flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-blue-500" /> Hop Transit Timeline ({analysis.totalHops} Total Relays)
+                    </h3>
                   </div>
-                ))}
-              </div>
-            </div>
 
-            <JsonViewer data={analysis} title="Raw PhishGuard Forensic JSON Output" />
+                  <div className="overflow-x-auto rounded-xl border border-argus-200 dark:border-slate-800">
+                    <table className="w-full text-left text-xs border-collapse font-mono">
+                      <thead>
+                        <tr className="bg-argus-100 dark:bg-slate-900 text-argus-700 dark:text-slate-300 font-bold border-b border-argus-200 dark:border-slate-800 font-sans">
+                          <th className="p-3.5">Hop #</th>
+                          <th className="p-3.5">Sending Host (From)</th>
+                          <th className="p-3.5">Receiving Host (By)</th>
+                          <th className="p-3.5">Protocol</th>
+                          <th className="p-3.5 text-right">Delay</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-argus-200 dark:divide-slate-800 text-argus-800 dark:text-slate-200">
+                        {analysis.hops.map((hop) => (
+                          <tr key={hop.hopNumber} className="hover:bg-argus-50 dark:hover:bg-slate-800/40">
+                            <td className="p-3.5 font-bold text-blue-600 dark:text-blue-400">Hop {hop.hopNumber}</td>
+                            <td className="p-3.5">{hop.fromHost}</td>
+                            <td className="p-3.5">{hop.byHost}</td>
+                            <td className="p-3.5 text-argus-500 dark:text-slate-400">{hop.protocol}</td>
+                            <td className={`p-3.5 text-right font-bold ${hop.delaySec > 300 ? 'text-rose-500' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                              {hop.delaySec}s
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Synced Explanatory Card: Dynamic Findings */}
+                <div className="bg-white dark:bg-[#131b2e] p-6 rounded-2xl border border-argus-200 dark:border-slate-800 shadow-card space-y-3">
+                  <h3 className="text-sm font-bold text-argus-900 dark:text-white flex items-center gap-2">
+                    <Info className="w-4 h-4 text-blue-500" /> Automated Forensics & Threat Findings
+                  </h3>
+
+                  <div className="space-y-2">
+                    {analysis.findings.map((finding, idx) => (
+                      <div key={idx} className="p-3 rounded-xl bg-argus-50 dark:bg-slate-900 border border-argus-200 dark:border-slate-800 flex items-start gap-2.5 text-xs text-argus-800 dark:text-slate-200">
+                        {analysis.riskLevel === 'LOW' ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                        ) : (
+                          <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                        )}
+                        <span>{finding}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <JsonViewer data={analysis} title="Raw PhishGuard Forensic JSON Output" />
+              </div>
+            </AuthBlurGate>
           </div>
         )}
 

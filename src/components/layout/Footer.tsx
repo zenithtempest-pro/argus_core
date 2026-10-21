@@ -19,7 +19,7 @@ export function Footer() {
               <span className="text-base font-bold text-argus-900 dark:text-white">ArgusCore</span>
             </div>
             <p className="text-xs text-argus-600 dark:text-slate-400 leading-relaxed">
-              Enterprise-grade Open Source Intelligence (OSINT) and MXToolbox network diagnostic framework for threat analysts and sysadmins.
+              Enterprise-grade Open Source Intelligence (OSINT) and network diagnostic framework for threat analysts and sysadmins.
             </p>
             <div className="text-xs text-argus-500 dark:text-slate-400 flex items-center gap-1.5 pt-1">
               <Mail className="w-3.5 h-3.5 text-brand" />

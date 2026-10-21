@@ -3,17 +3,19 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Shield, Search, Download, LayoutDashboard, Wrench, Info, Mail, Menu, X, UserCheck, LogIn, ChevronDown, Zap, AlertOctagon, MailCheck, ShieldCheck, FileCode, Activity, FileText, Image as ImageIcon, Cpu, Phone, Car } from 'lucide-react';
+import { Shield, Search, Download, LayoutDashboard, Wrench, Info, Mail, Menu, X, UserCheck, LogIn, ChevronDown, Zap, AlertOctagon, MailCheck, ShieldCheck, FileCode, Activity, FileText, Image as ImageIcon, Cpu, Phone, Car, UserPlus, LogOut, User, Network } from 'lucide-react';
 import { GlobalSearchModal } from '../search/GlobalSearchModal';
 import { ThemeToggle } from '../theme/ThemeToggle';
+import { useAuth } from '@/context/AuthContext';
 
 export function Navbar() {
   const pathname = usePathname();
+  const { isLoggedIn, user, logout } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isToolsDropdownOpen, setIsToolsDropdownOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(true);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -37,17 +39,17 @@ export function Navbar() {
   ];
 
   const osintGroup = [
+    { href: '/tools/dns', label: 'Subdomain & DNS Mapper', icon: Network },
     { href: '/tools/identity', label: '25+ Username Hunter', icon: UserCheck },
     { href: '/tools/phone-lookup', label: 'Phone Number Lookup', icon: Phone },
     { href: '/tools/vehicle-lookup', label: 'Vehicle & VIN Lookup', icon: Car },
     { href: '/tools/media-docs', label: 'EXIF & Document Dorking', icon: FileText },
     { href: '/tools/scanners', label: 'Nmap TCP Port Auditor', icon: Cpu },
-    { href: '/tools/network', label: 'DNS Infrastructure & IP Geo', icon: Wrench },
   ];
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full bg-white/95 dark:bg-[#090d16]/95 backdrop-blur-md border-b border-argus-200 dark:border-slate-800 shadow-subtle transition-colors">
+      <header className="sticky top-0 z-50 w-full bg-white/95 dark:bg-[#090d16]/95 backdrop-blur-md border-b border-argus-200 dark:border-slate-800 shadow-subtle transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             
@@ -101,10 +103,10 @@ export function Navbar() {
                   <div className="absolute left-0 top-full pt-1 w-96 z-50 animate-in fade-in slide-in-from-top-2">
                     <div className="bg-white dark:bg-[#131b2e] border border-argus-200 dark:border-slate-700 rounded-xl shadow-elevated p-3 space-y-3">
                       
-                      {/* Group 1: MXToolbox Diagnostics */}
+                      {/* Group 1: Enterprise Diagnostics */}
                       <div>
                         <div className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-1.5 px-2">
-                          MXToolbox Diagnostic Suite
+                          Enterprise Diagnostic Suite
                         </div>
                         <div className="grid grid-cols-2 gap-1">
                           {diagnosticGroup.map((tool) => {
@@ -164,17 +166,19 @@ export function Navbar() {
                 Script Hub
               </Link>
 
-              <Link
-                href="/dashboard"
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
-                  isActive('/dashboard')
-                    ? 'bg-brand-light dark:bg-brand/20 text-brand dark:text-blue-400 border border-brand-border dark:border-brand/40'
-                    : 'text-argus-600 dark:text-slate-300 hover:text-argus-900 dark:hover:text-white hover:bg-argus-100 dark:hover:bg-slate-800'
-                }`}
-              >
-                <LayoutDashboard className="w-3.5 h-3.5" />
-                Dashboard
-              </Link>
+              {mounted && isLoggedIn && (
+                <Link
+                  href="/dashboard"
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+                    isActive('/dashboard')
+                      ? 'bg-brand-light dark:bg-brand/20 text-brand dark:text-blue-400 border border-brand-border dark:border-brand/40'
+                      : 'text-argus-600 dark:text-slate-300 hover:text-argus-900 dark:hover:text-white hover:bg-argus-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <LayoutDashboard className="w-3.5 h-3.5" />
+                  Dashboard
+                </Link>
+              )}
 
               <Link
                 href="/methodology"
@@ -216,28 +220,39 @@ export function Navbar() {
 
               {mounted && isLoggedIn ? (
                 <div className="flex items-center gap-2">
-                  <Link
-                    href="/dashboard"
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-argus-800 dark:text-slate-200 bg-argus-100 dark:bg-slate-800 hover:bg-argus-200 dark:hover:bg-slate-700 border border-argus-200 dark:border-slate-700 rounded-lg transition-colors"
-                  >
-                    <UserCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                    <span className="hidden sm:inline">Session</span>
-                  </Link>
+                  <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-argus-800 dark:text-slate-200 bg-argus-100 dark:bg-slate-800 border border-argus-200 dark:border-slate-700 rounded-xl">
+                    <div className="w-5 h-5 rounded-full bg-brand text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                      {user?.name?.[0]?.toUpperCase() || 'A'}
+                    </div>
+                    <span className="hidden sm:inline font-sans font-bold text-argus-900 dark:text-white">
+                      {user?.name || 'Alex Vance'}
+                    </span>
+                  </div>
                   <button
-                    onClick={() => setIsLoggedIn(false)}
-                    className="text-xs text-argus-500 dark:text-slate-400 hover:text-rose-600 px-1.5 py-1 transition-colors"
+                    onClick={() => logout()}
+                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-subtle transition-all"
                   >
-                    Exit
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Sign Out</span>
                   </button>
                 </div>
               ) : mounted ? (
-                <Link
-                  href="/auth/login"
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-brand hover:bg-brand-hover rounded-lg shadow-card transition-colors"
-                >
-                  <LogIn className="w-3.5 h-3.5" />
-                  Sign In
-                </Link>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href="/auth/login"
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-argus-700 dark:text-slate-200 bg-argus-100 dark:bg-slate-800 hover:bg-argus-200 dark:hover:bg-slate-700 border border-argus-200 dark:border-slate-700 rounded-xl transition-colors"
+                  >
+                    <LogIn className="w-3.5 h-3.5" />
+                    <span>Log In</span>
+                  </Link>
+                  <Link
+                    href="/auth/signup"
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-brand hover:bg-brand-hover rounded-xl shadow-card transition-colors"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                    <span>Sign Up</span>
+                  </Link>
+                </div>
               ) : null}
 
               {/* Mobile Toggle */}
@@ -267,7 +282,7 @@ export function Navbar() {
             <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2 text-xs font-semibold text-argus-800 dark:text-slate-200">
               Overview
             </Link>
-            <div className="px-3 py-1 text-xs font-bold text-amber-600 uppercase">MXToolbox Suite</div>
+            <div className="px-3 py-1 text-xs font-bold text-amber-600 uppercase">Enterprise Diagnostic Suite</div>
             {diagnosticGroup.map((t) => (
               <Link key={t.href} href={t.href} onClick={() => setIsMobileMenuOpen(false)} className="block pl-6 py-1 text-xs text-argus-600 dark:text-slate-300 hover:text-amber-600">
                 • {t.label}
@@ -282,9 +297,11 @@ export function Navbar() {
             <Link href="/downloads" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2 text-xs font-semibold text-argus-800 dark:text-slate-200 mt-2">
               Script Hub
             </Link>
-            <Link href="/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2 text-xs font-semibold text-argus-800 dark:text-slate-200">
-              Dashboard
-            </Link>
+            {mounted && isLoggedIn && (
+              <Link href="/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2 text-xs font-semibold text-argus-800 dark:text-slate-200">
+                Dashboard
+              </Link>
+            )}
             <Link href="/methodology" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2 text-xs font-semibold text-argus-800 dark:text-slate-200">
               Methodology
             </Link>

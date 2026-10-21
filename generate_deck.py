@@ -89,7 +89,7 @@ slides_data = [
         "category": "GOVERNANCE",
         "bullets": [
             "RBAC Admin Panel: Live user session monitoring, query logs, and account controls at /admin.",
-            "Flippa-Style Authentication: Clean email login, standard auth, and Google/LinkedIn SSO.",
+            "ArgusCore Enterprise Authentication: Clean email login, standard auth, and Google/GitHub SSO.",
             "Official Support Ecosystem: Direct analyst routing to supportarguscore@gmail.com with SLA tracking.",
             "Defensive Protections: Command injection guards and CSP headers."
         ]

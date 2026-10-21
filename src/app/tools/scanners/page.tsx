@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { ShieldCheck, Search, Loader2, Server, CheckCircle2, XCircle, Clock, Lock, Globe, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/components/ui/Toast';
+import { AuthBlurGate } from '@/components/auth/AuthBlurGate';
 
 interface AuditResult {
   target: string;
@@ -209,72 +210,74 @@ export default function ScannersPage() {
               </div>
             </div>
 
-            {/* Card 2: Security Header Audit Table */}
-            <div className="bg-white dark:bg-[#131b2e] p-6 rounded-2xl border border-argus-200 dark:border-slate-800 shadow-card space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-argus-900 dark:text-white flex items-center gap-2">
-                  <ShieldCheck className="w-5 h-5 text-emerald-500" />
-                  Security Header Audit Table
-                </h2>
-                <div className="text-xs font-medium text-argus-600 dark:text-slate-400">
-                  Target: <span className="font-mono text-argus-900 dark:text-white">{result.target}</span>
+            {/* Card 2: Security Header Audit Table gated by AuthBlurGate */}
+            <AuthBlurGate redirectPath="/tools/scanners">
+              <div className="bg-white dark:bg-[#131b2e] p-6 rounded-2xl border border-argus-200 dark:border-slate-800 shadow-card space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-bold text-argus-900 dark:text-white flex items-center gap-2">
+                    <ShieldCheck className="w-5 h-5 text-emerald-500" />
+                    Security Header Audit Table
+                  </h2>
+                  <div className="text-xs font-medium text-argus-600 dark:text-slate-400">
+                    Target: <span className="font-mono text-argus-900 dark:text-white">{result.target}</span>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto rounded-xl border border-argus-200 dark:border-slate-800">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-argus-100 dark:bg-slate-900/80 text-argus-700 dark:text-slate-300 border-b border-argus-200 dark:border-slate-800 font-semibold">
+                        <th className="p-3.5">Header Name</th>
+                        <th className="p-3.5">Status</th>
+                        <th className="p-3.5">Observed Value</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-argus-200 dark:divide-slate-800 text-argus-800 dark:text-slate-200 font-mono">
+                      {allMonitoredHeaders.map((headerKey) => {
+                        const presentValue = result.securityHeaders[headerKey];
+                        const isPresent = Boolean(presentValue);
+                        const displayName = CANONICAL_HEADER_NAMES[headerKey] || headerKey;
+
+                        return (
+                          <tr key={headerKey} className="hover:bg-argus-50 dark:hover:bg-slate-800/40 transition-colors">
+                            <td className="p-3.5 font-bold font-sans text-argus-900 dark:text-white">
+                              {displayName}
+                              <span className="block text-[10px] font-mono text-argus-500 dark:text-slate-400 font-normal">
+                                {headerKey}
+                              </span>
+                            </td>
+                            <td className="p-3.5">
+                              {isPresent ? (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold font-sans bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                  Present
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold font-sans bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                                  <AlertTriangle className="w-3.5 h-3.5" />
+                                  Missing
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-3.5 max-w-md truncate text-argus-700 dark:text-slate-300">
+                              {isPresent ? (
+                                <span title={presentValue} className="bg-argus-100 dark:bg-slate-900 px-2 py-1 rounded border border-argus-200 dark:border-slate-800 text-[11px]">
+                                  {presentValue}
+                                </span>
+                              ) : (
+                                <span className="text-argus-400 dark:text-slate-500 italic font-sans text-[11px]">
+                                  Not configured / header omitted
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-
-              <div className="overflow-x-auto rounded-xl border border-argus-200 dark:border-slate-800">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-argus-100 dark:bg-slate-900/80 text-argus-700 dark:text-slate-300 border-b border-argus-200 dark:border-slate-800 font-semibold">
-                      <th className="p-3.5">Header Name</th>
-                      <th className="p-3.5">Status</th>
-                      <th className="p-3.5">Observed Value</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-argus-200 dark:divide-slate-800 text-argus-800 dark:text-slate-200 font-mono">
-                    {allMonitoredHeaders.map((headerKey) => {
-                      const presentValue = result.securityHeaders[headerKey];
-                      const isPresent = Boolean(presentValue);
-                      const displayName = CANONICAL_HEADER_NAMES[headerKey] || headerKey;
-
-                      return (
-                        <tr key={headerKey} className="hover:bg-argus-50 dark:hover:bg-slate-800/40 transition-colors">
-                          <td className="p-3.5 font-bold font-sans text-argus-900 dark:text-white">
-                            {displayName}
-                            <span className="block text-[10px] font-mono text-argus-500 dark:text-slate-400 font-normal">
-                              {headerKey}
-                            </span>
-                          </td>
-                          <td className="p-3.5">
-                            {isPresent ? (
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold font-sans bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                                Present
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold font-sans bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                                <AlertTriangle className="w-3.5 h-3.5" />
-                                Missing
-                              </span>
-                            )}
-                          </td>
-                          <td className="p-3.5 max-w-md truncate text-argus-700 dark:text-slate-300">
-                            {isPresent ? (
-                              <span title={presentValue} className="bg-argus-100 dark:bg-slate-900 px-2 py-1 rounded border border-argus-200 dark:border-slate-800 text-[11px]">
-                                {presentValue}
-                              </span>
-                            ) : (
-                              <span className="text-argus-400 dark:text-slate-500 italic font-sans text-[11px]">
-                                Not configured / header omitted
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            </AuthBlurGate>
 
           </div>
         )}
