@@ -21,6 +21,7 @@ import {
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/components/ui/Toast';
 import { DiagnosticResultView, MainRecordItem, AssessmentTestItem, RelatedPill } from '@/components/tools/DiagnosticResultView';
+import { ArgusReconView } from '@/app/tools/dns/page';
 
 export default function SuperToolPage() {
   const { showToast } = useToast();
@@ -299,7 +300,13 @@ export default function SuperToolPage() {
         </div>
 
         {/* Structured Diagnostic Results View */}
-        {resultData && (
+        {resultData && ((resultData.commandPrefix || prefix) === 'dns' || resultData.subdomains) ? (
+          <ArgusReconView
+            data={resultData}
+            onRerun={() => handleSuperToolExecute()}
+            redirectPath="/tools/supertool"
+          />
+        ) : resultData ? (
           <DiagnosticResultView
             target={resultData.target || resultData.targetDomain}
             queryType={`SuperTool (${(resultData.commandPrefix || prefix).toUpperCase()})`}
@@ -310,7 +317,7 @@ export default function SuperToolPage() {
             rawJson={resultData}
             onRerun={() => handleSuperToolExecute()}
           />
-        )}
+        ) : null}
 
         {/* Documentation Footer Block */}
         <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-argus-200 dark:border-slate-800 p-6 shadow-subtle space-y-3 text-xs">

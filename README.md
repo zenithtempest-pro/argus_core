@@ -8,7 +8,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 [![Uptime](https://img.shields.io/badge/Uptime-99.99%25-emerald?style=for-the-badge)](https://supportarguscore.com)
 
-**ArgusCore** is a modern, full-stack, enterprise-grade cybersecurity reconnaissance and network diagnostics application. It seamlessly merges **Enterprise Universal Diagnostic Utilities** (SuperTool Command Center, 50+ RBL Blacklist Check, MX Lookup, DMARC Inspector, RFC 822 Email Header Analyzer, SPF Inspector, Domain Health Audit) with **Advanced OSINT Intelligence Modules** (ArgusRecon Subdomain & DNS Infrastructure Mapper, Indian +91 & Global Phone Lookup with 22 DoT Circle mapping, 17-character VIN Decoder, 25+ Multi-Platform Social Username Hunter, Universal File & EXIF Forensics Analyzer, Document Leak Dorking, and Web Service & Security Header Auditor).
+**ArgusCore** is a modern, full-stack, enterprise-grade cybersecurity reconnaissance and network diagnostics application. It seamlessly merges **ArgusCore Enterprise Universal Diagnostic Utilities** (SuperTool Command Center, 50+ RBL Blacklist Check, MX Lookup, DMARC Inspector, RFC 822 Email Header Analyzer, SPF Inspector, Domain Health Audit) with **Advanced OSINT Intelligence Modules** (ArgusRecon Subdomain & Infrastructure Mapper, Indian +91 & Global Phone Lookup with 22 DoT Circle mapping, 17-character VIN Decoder, 25+ Multi-Platform Social Username Hunter, Universal File & EXIF Forensics Analyzer, Document Leak Dorking, and Web Service & Security Header Auditor).
 
 ---
 
@@ -68,7 +68,7 @@ ArgusCore is built on a high-performance Next.js 16 (App Router) architectural f
 
 ### 1. Enterprise Diagnostic Suite
 
-- **SuperTool Command Center (`/tools/supertool`)**: Universal command query bar with `dns:` as the primary default prefix (supporting shortcuts: `dns:`, `mx:`, `blacklist:`, `dmarc:`, `a:`, `arin:`, `whois:`, `spf:`, `tcp:`). Features automatic input sanitization (stripping protocols, trailing slashes, and whitespace). Default preset targets `cloudflare.com` and `example.com`.
+- **SuperTool Command Center (`/tools/supertool`)**: Universal command query bar with `dns:` (e.g., `dns:cloudflare.com`) as the #1 default command prefix (supporting shortcuts: `dns:`, `mx:`, `blacklist:`, `dmarc:`, `a:`, `arin:`, `whois:`, `spf:`, `tcp:`). Features automatic input sanitization (stripping protocols, trailing slashes, and whitespace). Default preset targets `cloudflare.com` and `example.com`.
 - **Blacklist / Blocklist Checker (`/tools/blacklist`)**: Queries 50+ DNSBL blocklists (Spamhaus ZEN, Barracuda, SORBS, SpamCop, PSBL, Truncate) with authoritative **Orange (`#d97706`)** primary query buttons and **Cyan (`#06b6d4`)** "Solve Email Delivery Problems" support triggers.
 - **MX Record Lookup (`/tools/mx-lookup`)**: Resolves Mail Exchanger records with priority preference, host IP address, TTL, SMTP port 25 banner response time, and open-relay detection.
 - **DMARC Record Inspector (`/tools/dmarc`)**: Parses `_dmarc.domain.com` TXT records, evaluates policy enforcement (`p=reject`, `p=quarantine`, `p=none`), checks alignment flags (`adkim`, `aspf`), and validates RFC 7489 compliance.
@@ -80,31 +80,37 @@ ArgusCore is built on a high-performance Next.js 16 (App Router) architectural f
 
 ### 2. OSINT Reconnaissance Engines
 
-- **ArgusRecon Subdomain & DNS Infrastructure Mapper (`/tools/dns`)**:
-  - **Unified DNS Records**: Resolves A, AAAA, CNAME, NS, MX, TXT, and SOA records simultaneously.
-  - **Certificate Transparency Subdomain Discovery**: Enumerates subdomains in real-time via `crt.sh` logs.
-  - **Infrastructure Topology & GeoIP**: Maps autonomous systems (ASN), ISP routing, and geographic node locations with visual topology mapping.
+- **ArgusRecon Subdomain & Infrastructure Mapper (`/tools/dns`)**:
+  - **Primary Unified Engine**: Merges complete passive DNS reconnaissance and Certificate Transparency (`crt.sh`) subdomain discovery into a single cohesive visual interface.
+  - **Passive Certificate Transparency Discovery**: Real-time extraction of indexed SSL/TLS certificates and SAN host records from `crt.sh`.
+  - **4-Card KPI Telemetry (Teaser Preview)**: Real-time overview displaying **Target Domain** (domain, TLD, cert search status), **Hosts Found** (total unique discovered IPv4/IPv6 host nodes), **Unique IPs / CIDRs** (IP count, ASN count, and primary cluster location), and **GeoIP Footprint** (geographic host badges across countries such as US, DE, IN).
+  - **Side-by-Side Infrastructure Cards (Teaser Preview)**:
+    - **DNS Nameservers (NS Records)**: Hostname, resolved IPv4 address, ASN organization (`ASN13335 CLOUDFLARENET`), and country flag.
+    - **Mail Exchangers (MX Records)**: Preference priority numbers in orange (`Pref 10`), hostname, resolved IPv4 address, ASN provider, and country flag.
+  - **Interactive Infrastructure Topology Map & Host Node Graph**: Interactive SVG canvas connecting the target apex domain to authoritative Nameservers, MX routers, Cloud IP clusters, and leaf subdomain nodes (`api`, `dash`, `mail`, `cdn`, `vpn`) with a real-time click-to-inspect node telemetry panel.
+  - **Consolidated Resource Records Matrix**: Full consolidated inspection of A, AAAA, CNAME, TXT, SPF, DMARC, and SOA records with live DNS status verification.
+  - **SOA Authority & Timing Metrics**: Deep zone administration parameters (Primary Nameserver, Responsible Authority Email, Serial Number, Refresh, Retry, Expire, and Minimum/Default TTL).
 - **Indian (+91) & Global Phone Lookup (`/tools/phone-lookup`)**:
   - **Auto-Normalization**: Automatically formats 10-digit (`9999900000`) or 11-digit (`09999900000`) inputs to standard E.164 (`+91 99999 00000`).
   - **DoT 22 Telecom Circles**: Maps prefix series across all 22 Department of Telecommunications circles (Mumbai, Delhi-NCR, Karnataka, Tamil Nadu, Maharashtra & Goa, UP East, UP West, West Bengal, Kolkata, Kerala, Punjab, Gujarat, etc.).
   - **Operator Resolution**: Detects initial allocated carrier (Reliance Jio, Bharti Airtel, Vodafone Idea - Vi, BSNL, MTNL).
   - **Telecommunication Metadata**: Displays Mobile Country Code (MCC `404` / `405`), Mobile Network Code (MNC), Timezone (`Asia/Kolkata` IST, UTC+5:30), Line Type (Mobile GSM/LTE/5G), and Mobile Number Portability (MNP) advisory.
 - **Vehicle & VIN Intelligence Decoder (`/tools/vehicle-lookup`)**: Validates 17-character VIN numbers according to ISO 3779 / NHTSA standards. Decodes vehicle make, model year, engine displacement, assembly plant, body classification, and country of origin.
-- **25+ Multi-Platform Social Username Hunter (`/tools/identity`)**: Concurrently probes target usernames across 25 platforms (Instagram, Telegram, GitHub, X/Twitter, Reddit, TikTok, LinkedIn, YouTube, Pinterest, Medium, Dev.to, Twitch, Spotify, Discord, Steam, SoundCloud, Vimeo, Dribbble, Behance, ProductHunt, HackerNews, Patreon, Substack, Quora, GitLab) with FOUND/AVAILABLE badges and direct profile links.
+- **25+ Multi-Platform Social Username Hunter (`/tools/identity`)**: Concurrently probes target usernames (e.g., `Alex Vance` / `alexvance`) across 25 platforms (Instagram, Telegram, GitHub, X/Twitter, Reddit, TikTok, LinkedIn, YouTube, Pinterest, Medium, Dev.to, Twitch, Spotify, Discord, Steam, SoundCloud, Vimeo, Dribbble, Behance, ProductHunt, HackerNews, Patreon, Substack, Quora, GitLab) with FOUND/AVAILABLE badges and direct profile links.
 - **Universal File & EXIF Forensics Analyzer (`/tools/media-docs`)**:
-  - **Layer 1 Universal File Forensics (100% Client-Side)**: File name, exact byte size, MIME content type, UTC/local timestamps, pixel geometry (`Width × Height px`), megapixels, and aspect ratio loaded via browser `HTMLImageElement`.
-  - **Cryptographic & Binary Inspection**: Computes SHA-256 checksums in-browser via Web Cryptography API (`crypto.subtle.digest`) and inspects the first 8 bytes for binary magic byte signatures (JPEG, PNG, GIF, PDF, ZIP, RIFF/WebP, TIFF).
-  - **Layer 2 Deep EXIF & GPS Optics**: Extracts camera make, model, lens, exposure time, aperture, ISO, and GPS coordinates with OpenStreetMap links. Handles messaging-stripped files (e.g. WhatsApp, Signal) gracefully with automated compression detection badges.
-  - **Document Dorking Hub**: One-click Google Dork queries for indexed confidential files (`filetype:pdf "confidential"`, `filetype:xlsx "password"`).
+  - **Layer 1 Universal File Forensics (100% Client-Side)**: Extracts file name, exact byte size, MIME content type, UTC & local modified timestamps, image pixel dimensions (`Width × Height px`), megapixels, and aspect ratio via in-browser `HTMLImageElement` with zero server uploads.
+  - **Cryptographic & Binary Header Inspection**: Computes cryptographic SHA-256 digests in-browser via the Web Cryptography API (`crypto.subtle.digest`) and reads the first 8 binary magic bytes (identifying JPEG `FF D8 FF`, PNG `89 50 4E 47`, GIF `47 49 46 38`, PDF `%PDF`, ZIP `PK..`, and RIFF/WebP).
+  - **Layer 2 Deep EXIF & GPS Optics**: Extracts camera manufacturer, model, lens, exposure time, aperture, ISO, original capture date, and GPS coordinates with direct OpenStreetMap links. Automatically identifies social media/messaging compression (e.g., WhatsApp, Signal, Telegram) when camera headers have been stripped.
+  - **Document Leak Dork Hub**: Pre-configured Google OSINT dork templates for finding exposed documents (`filetype:pdf "confidential"`, `filetype:xlsx "password"` on `example.com` or `cloudflare.com`).
 - **Web Service & Security Header Auditor (`/tools/scanners`)**: Passive HTTP/HTTPS diagnostic engine measuring round-trip latency and inspecting critical security headers (HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy).
 
 ---
 
 ### 3. Role-Based Teaser & Authentication Gating
 
-ArgusCore implements a non-intrusive preview and authentication model via [`src/components/auth/AuthBlurGate.tsx`](file:///C:/Users/HP/OneDrive/Desktop/ArgusCore/src/components/auth/AuthBlurGate.tsx):
-- **Zero-Friction Teasers**: Anonymous and unauthenticated visitors immediately receive high-level reconnaissance telemetry (target domain, host counts, basic image geometry, latency stats).
-- **Glassmorphic `<AuthBlurGate>`**: Deep records (full subdomain host tables, DNS nameservers, SPF/DMARC assessments, raw VIN engineering telemetry, SHA-256 cryptographic hashes, and deep EXIF optics) are guarded behind a centered glassmorphic login/signup modal with `blur-md opacity-50` styling.
+ArgusCore implements an enterprise teaser preview and authentication model via [`src/components/auth/AuthBlurGate.tsx`](file:///C:/Users/HP/OneDrive/Desktop/ArgusCore/src/components/auth/AuthBlurGate.tsx) across all 14 diagnostic and OSINT modules:
+- **Zero-Friction Teasers**: Anonymous and unauthenticated visitors immediately receive high-level reconnaissance telemetry (target domain, host counts, basic image geometry, latency stats, and NS/MX server lists).
+- **Glassmorphic `<AuthBlurGate>`**: Deep records (full subdomain host tables, interactive topology maps, SPF/DMARC assessments, raw VIN engineering telemetry, SHA-256 cryptographic hashes, and deep EXIF optics) are guarded behind a centered glassmorphic login/signup modal with `blur-md opacity-50` styling.
 - **Instant Full Access**: Logged-in analysts view 100% of telemetry data across all 14 tools with zero blur.
 
 ---
@@ -240,7 +246,7 @@ ArgusCore/
 │   │   └── ui/
 │   │       ├── Badge.tsx             # Status badge component
 │   │       ├── JsonViewer.tsx        # Collapsible JSON inspector
-│   │       └── Toast.tsx             # Toast notification provider
+│   │       └── Toast.tsx            # Toast notification provider
 │   └── data/
 │       └── scripts.ts                # Script repository metadata registry
 ├── tailwind.config.js                # Tailwind configuration with darkMode: 'class'
@@ -318,7 +324,7 @@ npm run start
 - `header-analyzer` — RFC 822 email header analyzer
 - `phone-lookup` — Indian (+91) DoT circle & global phone tracer (`target`: `"9999900000"`)
 - `vehicle-lookup` — 17-character VIN decoder (`target`: `"1FA6P8CF0R5100001"`)
-- `username` — 25+ social network username hunter
+- `username` — 25+ social network username hunter (`target`: `"Alex Vance"` / `"alexvance"`)
 - `ports` — TCP port auditor
 - `service-audit` — Web service reachability & security header audit
 

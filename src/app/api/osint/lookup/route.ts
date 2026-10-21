@@ -205,6 +205,22 @@ export async function POST(request: Request) {
         { subdomain: `vpn.${domain}`, ip: '203.0.113.88', cidr: '203.0.113.0/24', country: 'India', countryCode: 'IN', asn: 'ASN: 45820', asnName: 'TATA-COMM-IN - Tata Communications', services: ['openvpn: UDP 1194', 'tech: OpenVPN AS'], revIpCount: 2 },
       ];
 
+      const txtRecords = [
+        { type: 'SPF', prefix: domain, value: 'v=spf1 include:_spf.google.com ~all', ttl: 3600, status: 'PASSED' },
+        { type: 'DMARC', prefix: `_dmarc.${domain}`, value: 'v=DMARC1; p=reject; sp=reject; pct=100; adkim=r; aspf=r;', ttl: 3600, status: 'ENFORCED' },
+        { type: 'TXT', prefix: domain, value: `google-site-verification=verify_${domain.replace(/[^a-z0-9]/g, '')}_token`, ttl: 3600, status: 'VERIFIED' },
+      ];
+
+      const soaRecord = {
+        primaryNs: `ns1.${domain}`,
+        adminEmail: `hostmaster.${domain}`,
+        serial: '2026102101',
+        refresh: 10000,
+        retry: 2400,
+        expire: 604800,
+        defaultTtl: 3600,
+      };
+
       return NextResponse.json({
         targetDomain: domain,
         queryType: 'ArgusRecon Infrastructure & Subdomain Mapper',
@@ -220,6 +236,8 @@ export async function POST(request: Request) {
         mxRecords,
         dnsRecords,
         subdomains,
+        txtRecords,
+        soaRecord,
       });
     }
 
