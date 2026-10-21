@@ -210,7 +210,10 @@ export default function MediaDocsPage() {
 
         const make = exifTags.Make?.description || fileTags.Make?.description;
         const model = exifTags.Model?.description || fileTags.Model?.description;
-        const lens = exifTags.LensModel?.description || exifTags.Lens?.description;
+        const lensRaw = (tags as any)?.Lens?.description || (tags as any)?.LensModel?.description || (exifTags as any)?.LensModel?.description || (exifTags as any)?.Lens?.description || ((tags as any).Lens || (tags as any).LensModel || "Not Available");
+        const lens = typeof lensRaw === 'string' && lensRaw !== 'Not Available'
+          ? lensRaw
+          : (typeof lensRaw === 'object' && lensRaw?.description ? lensRaw.description : undefined);
         const dateTimeOriginal = exifTags.DateTimeOriginal?.description || fileTags.DateTimeOriginal?.description;
         const software = exifTags.Software?.description || fileTags.Software?.description;
         const exposureTime = exifTags.ExposureTime?.description || fileTags.ExposureTime?.description;
