@@ -1,5 +1,7 @@
 'use client';
 
-import DnsInfrastructurePage from '../dns/page';
+export const dynamic = 'force-dynamic';
 
-export default DnsInfrastructurePage;
+import DnsPage from '../dns/page';
+
+export default DnsPage;

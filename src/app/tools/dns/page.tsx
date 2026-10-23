@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { 
   Network, 
@@ -744,7 +744,7 @@ export function ArgusReconView({ data, onRerun, redirectPath = "/tools/dns" }: A
   );
 }
 
-export default function DnsInfrastructurePage() {
+function DnsContent() {
   const searchParams = useSearchParams();
   const initialDomain = searchParams.get('q') || searchParams.get('domain') || '';
   const { showToast } = useToast();
@@ -896,3 +896,13 @@ export default function DnsInfrastructurePage() {
     </div>
   );
 }
+
+export default function DnsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-white">Loading DNS Recon Engine...</div>}>
+      <DnsContent />
+    </Suspense>
+  );
+}
+
+export { DnsPage as DnsInfrastructurePage };
