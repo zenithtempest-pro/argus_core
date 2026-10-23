@@ -1,49 +1,123 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Shield, Eye, EyeOff, ArrowRight, Lock } from 'lucide-react';
+import { Shield, Eye, EyeOff, ArrowRight, Lock, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
-import { useAuth } from '@/context/AuthContext';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams?.get('redirect') || '/dashboard';
+  const confirmationPending = searchParams?.get('confirmed') === 'pending';
+  const initialEmail = searchParams?.get('email') || '';
+
   const { showToast } = useToast();
-  const { login } = useAuth();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
-  const handleLogin = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (initialEmail) {
+      setEmail(initialEmail);
+    }
+  }, [initialEmail]);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      showToast('Missing Credentials', 'Please enter both your email address and password.', 'error');
+    setAuthError(null);
+
+    const cleanEmail = email.trim();
+    if (!cleanEmail || !password) {
+      const msg = 'Please enter both your email address and password.';
+      setAuthError(msg);
+      showToast('Missing Credentials', msg, 'error');
       return;
     }
 
     setLoading(true);
-    setTimeout(() => {
-      const res = login(email, password);
-      setLoading(false);
-      if (res.success) {
+
+    try {
+      // Direct call to Supabase Auth signInWithPassword as required:
+      // supabase.auth.signInWithPassword({ email, password })
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password,
+      });
+
+      if (error) {
+        const errorMsg = error.message || 'Invalid email or password.';
+        setAuthError(errorMsg);
+        showToast('Authentication Error', errorMsg, 'error');
+        setLoading(false);
+        return;
+      }
+
+      if (data.user) {
         showToast('Signed In', 'Welcome back to ArgusCore Workspace.', 'success');
+        // On success, redirect the user to /dashboard (or redirect target)
         router.push(redirect);
       } else {
-        showToast('Authentication Error', res.error || 'Invalid email or password.', 'error');
+        showToast('Authentication Error', 'No active session returned. Please try again.', 'error');
       }
-    }, 600);
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'An unexpected error occurred during authentication.';
+      setAuthError(errorMsg);
+      showToast('Authentication Error', errorMsg, 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSocialLogin = (provider: string) => {
-    showToast('Social OAuth', `Redirecting to ${provider} OAuth...`, 'info');
-    setTimeout(() => {
-      login(`analyst@${provider.toLowerCase()}.com`);
-      router.push(redirect);
-    }, 800);
+  const handleForgotPassword = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!email.trim()) {
+      showToast('Email Required', 'Please enter your email above to receive password reset instructions.', 'info');
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${origin}/auth/reset-password`,
+      });
+
+      if (error) {
+        showToast('Reset Error', error.message, 'error');
+      } else {
+        showToast('Password Reset Sent', `Password reset instructions sent to ${email.trim()}`, 'success');
+      }
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to send reset email';
+      showToast('Reset Error', errorMsg, 'error');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const handleSocialLogin = async (provider: 'google' | 'github') => {
+    try {
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(redirect)}`,
+        },
+      });
+
+      if (error) {
+        showToast('Social Auth Error', error.message, 'error');
+      }
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'OAuth sign in failed';
+      showToast('Social Auth Error', errorMsg, 'error');
+    }
   };
 
   return (
@@ -62,6 +136,34 @@ function LoginForm() {
       {/* Form Container Card */}
       <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-argus-200 dark:border-slate-800 shadow-elevated p-6 sm:p-8 space-y-6">
         
+        {/* Unconfigured Alert for Developer notice */}
+        {!isSupabaseConfigured() && (
+          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>
+              <strong>Supabase Setup:</strong> Set <code className="bg-amber-500/20 px-1 py-0.5 rounded font-mono text-[10px]">NEXT_PUBLIC_SUPABASE_URL</code> and <code className="bg-amber-500/20 px-1 py-0.5 rounded font-mono text-[10px]">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> in <code className="bg-amber-500/20 px-1 py-0.5 rounded font-mono text-[10px]">.env.local</code> to connect live authentication.
+            </span>
+          </div>
+        )}
+
+        {/* Confirmation Pending Notice */}
+        {confirmationPending && (
+          <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs flex items-start gap-2 animate-in fade-in">
+            <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+            <span>
+              Account created! If your Supabase project enforces email confirmation, please verify your email before logging in.
+            </span>
+          </div>
+        )}
+
+        {/* Clean Error Message Display */}
+        {authError && (
+          <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2 animate-in fade-in">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
+            <div className="flex-1 font-medium">{authError}</div>
+          </div>
+        )}
+
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-argus-800 dark:text-slate-200 mb-1">
@@ -70,7 +172,10 @@ function LoginForm() {
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (authError) setAuthError(null);
+              }}
               placeholder="name@company.com"
               className="w-full px-3.5 py-2.5 text-xs font-medium bg-argus-50 dark:bg-slate-900 border border-argus-200 dark:border-slate-700 rounded-xl text-argus-900 dark:text-white focus:ring-2 focus:ring-brand/30 focus:border-brand focus:outline-none"
               required
@@ -82,19 +187,23 @@ function LoginForm() {
               <label className="block text-xs font-semibold text-argus-800 dark:text-slate-200">
                 Password
               </label>
-              <a
-                href="#forgot"
-                onClick={(e) => { e.preventDefault(); showToast('Password Reset', 'Password reset instructions sent to your email', 'info'); }}
-                className="text-[11px] font-semibold text-brand dark:text-blue-400 hover:underline"
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                disabled={resetLoading}
+                className="text-[11px] font-semibold text-brand dark:text-blue-400 hover:underline disabled:opacity-50"
               >
-                Forgot my password
-              </a>
+                {resetLoading ? 'Sending...' : 'Forgot my password'}
+              </button>
             </div>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (authError) setAuthError(null);
+                }}
                 placeholder="••••••••••••"
                 className="w-full px-3.5 py-2.5 text-xs font-medium bg-argus-50 dark:bg-slate-900 border border-argus-200 dark:border-slate-700 rounded-xl text-argus-900 dark:text-white focus:ring-2 focus:ring-brand/30 focus:border-brand focus:outline-none pr-10"
                 required
@@ -109,7 +218,7 @@ function LoginForm() {
             </div>
           </div>
 
-          {/* Bright Blue Sign In Button */}
+          {/* Sign In Button */}
           <button
             type="submit"
             disabled={loading}
@@ -132,7 +241,7 @@ function LoginForm() {
         <div className="space-y-2.5">
           <button
             type="button"
-            onClick={() => handleSocialLogin('Google')}
+            onClick={() => handleSocialLogin('google')}
             className="w-full py-2.5 px-4 bg-white dark:bg-slate-900 border border-argus-200 dark:border-slate-700 hover:bg-argus-50 dark:hover:bg-slate-800 text-argus-800 dark:text-slate-200 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-2.5"
           >
             <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
@@ -146,7 +255,7 @@ function LoginForm() {
 
           <button
             type="button"
-            onClick={() => handleSocialLogin('GitHub')}
+            onClick={() => handleSocialLogin('github')}
             className="w-full py-2.5 px-4 bg-[#24292e] hover:bg-[#1b1f23] text-white border border-transparent text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-2.5 shadow-sm"
           >
             <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
@@ -159,7 +268,10 @@ function LoginForm() {
         {/* Sub-link to Sign Up */}
         <div className="pt-2 text-center text-xs text-argus-600 dark:text-slate-400">
           Don't have an account?{' '}
-          <Link href={redirect ? `/auth/signup?redirect=${encodeURIComponent(redirect)}` : "/auth/signup"} className="font-bold text-brand dark:text-blue-400 hover:underline">
+          <Link
+            href={redirect ? `/auth/signup?redirect=${encodeURIComponent(redirect)}` : '/auth/signup'}
+            className="font-bold text-brand dark:text-blue-400 hover:underline"
+          >
             Create a free account
           </Link>
         </div>
@@ -169,7 +281,7 @@ function LoginForm() {
       {/* Security Footer Notice */}
       <div className="mt-6 text-center text-xs text-argus-500 dark:text-slate-500 flex items-center justify-center gap-1.5">
         <Lock className="w-3.5 h-3.5 text-brand" />
-        <span>256-bit SSL Encrypted • ArgusCore Enterprise Auth</span>
+        <span>256-bit SSL Encrypted • ArgusCore Supabase Auth</span>
       </div>
     </div>
   );
