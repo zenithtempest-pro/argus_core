@@ -7,8 +7,10 @@ const defaultKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder';
 
 export async function createServerSupabaseClient() {
   const cookieStore = await cookies();
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || defaultUrl;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || defaultKey;
+  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const rawKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+  const supabaseUrl = rawUrl || defaultUrl;
+  const supabaseAnonKey = rawKey || defaultKey;
 
   return createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
@@ -35,10 +37,11 @@ export async function createServerSupabaseClient() {
  * Fallback to anon key if service role is not supplied.
  */
 export function createAdminClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || defaultUrl;
+  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const supabaseUrl = rawUrl || defaultUrl;
   const serviceKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
     defaultKey;
 
   return createSupabaseClient(supabaseUrl, serviceKey, {

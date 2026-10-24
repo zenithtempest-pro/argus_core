@@ -159,10 +159,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       password: string
     ): Promise<{ success: boolean; error?: string; requiresConfirmation?: boolean }> => {
       try {
+        const origin = typeof window !== 'undefined' ? window.location.origin : '';
+        const emailRedirectTo = origin ? `${origin}/auth/callback?next=/dashboard` : undefined;
+
         const { data, error } = await supabase.auth.signUp({
           email: email.trim(),
           password,
           options: {
+            emailRedirectTo,
             data: {
               full_name: name.trim(),
             },

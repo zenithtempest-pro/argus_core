@@ -22,8 +22,17 @@ let browserClient: SupabaseClient | null = null;
 export function createClient(): SupabaseClient {
   if (browserClient) return browserClient;
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || defaultUrl;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || defaultKey;
+  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const rawKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+
+  const supabaseUrl = rawUrl || defaultUrl;
+  const supabaseAnonKey = rawKey || defaultKey;
+
+  if (typeof window !== 'undefined' && (!rawUrl || !rawKey || rawUrl.includes('placeholder'))) {
+    console.warn(
+      '[ArgusCore Supabase] Using fallback/placeholder credentials. Ensure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are set in your Vercel Environment Variables and redeployed.'
+    );
+  }
 
   browserClient = createBrowserClient(supabaseUrl, supabaseAnonKey);
   return browserClient;
